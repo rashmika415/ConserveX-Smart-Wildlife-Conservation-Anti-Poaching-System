@@ -1,0 +1,28 @@
+{
+  "name": "conservex",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n backend,frontend \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "test:coverage": "npm run test:coverage --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "seed": "npm run seed -w backend"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.11",
+    "concurrently": "^9.2.0",
+    "prettier": "^3.6.0",
+    "vitest": "^4.1.11"
+  }
+}

@@ -1,0 +1,72 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #16382c;
+  background: #f2f6f3;
+  line-height: 1.6;
+}
+body {
+  margin: 0;
+}
+.layout {
+  max-width: 1100px;
+  margin: auto;
+  padding: 24px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+h1 {
+  margin-bottom: 0;
+}
+header p {
+  margin-top: 0;
+}
+.panel {
+  background: white;
+  border: 1px solid #d5e1d8;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 20px 0;
+}
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+button,
+select {
+  font: inherit;
+  border: 1px solid #aac0b1;
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+button {
+  cursor: pointer;
+  background: white;
+  color: #16382c;
+}
+button[aria-pressed='true'] {
+  background: #205c40;
+  color: white;
+}
+.muted {
+  color: #5e7166;
+  font-size: 0.9rem;
+}
+[role='alert'] {
+  color: #a02626;
+}
+@media (max-width: 600px) {
+  .layout {
+    padding: 16px;
+  }
+  header {
+    align-items: flex-start;
+  }
+  select {
+    width: 100%;
+  }
+}
