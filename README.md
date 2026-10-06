@@ -1,91 +1,175 @@
-# ConserveX
+# ConserveX — Wildlife Conservation & Anti-Poaching Monitoring System
 
-Smart Wildlife Conservation and Anti-Poaching Monitoring System (SWCAMS).
+A mobile-friendly university assignment application connecting park managers, rangers and community liaison officers. One React frontend, one Express REST API and one MongoDB database support four substantial, independently demonstrable business flows.
 
-## Requirements
+## Implemented use cases
 
-- Node.js 22.12+ (Node.js 24 LTS recommended) and npm
-- Git
-- MongoDB locally or MongoDB Atlas when you are ready to enable persistence
+| Member | Use case                          | Complete flow                                                                                                                                                     |
+| ------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1      | Incident Management               | Ranger reports an incident with GPS/manual location and optional photo → confirmation → own history → manager review/status update.                               |
+| 2      | GPS Collar / High-Risk Zone Alert | Manager simulates a collar reading → MongoDB stores movement → circular zone detection creates/updates an alert → ranger/liaison acknowledges → manager resolves. |
+| 3      | Patrol Management                 | Manager creates route/checkpoints and assigns ranger → ranger starts → records waypoints/photos → completes or ends early with reason → manager views summary.    |
+| 4      | Community Reporting               | Public sighting without login → receipt → authorized staff review → response action with actor/time → status update.                                              |
 
-## First run
+Role-specific dashboards combine saved records, open counts and recent activity. The interface includes mobile navigation, status badges, loading/empty states, filters, confirmation dialogs and schematic coordinate cards. No paid API or hardware is required.
 
-Run these commands from the repository root:
+## Technology and architecture
 
-```powershell
-npm install
-Copy-Item backend/.env.example backend/.env
-Copy-Item frontend/.env.example frontend/.env
-npm run dev
+- **Frontend:** JavaScript, React, Vite, React Router, Axios, Lucide icons, responsive CSS.
+- **Backend:** JavaScript, Node.js, Express 5, Mongoose, JWT, bcryptjs, Multer, Helmet and rate limiting.
+- **Database:** MongoDB, including atomic state transitions and unique indexes for one active patrol per ranger and one unresolved alert per animal/zone.
+- **Tests:** Jest + Supertest + temporary MongoDB; Vitest + React Testing Library.
+
+```text
+frontend/src/
+  components/       Shared inputs, feedback, maps, badges, confirmations
+  context/          Authentication/session state
+  hooks/            API resource loading
+  layouts/          Public and role-aware staff navigation
+  modules/          incidents, patrols, collars, community
+  pages/            Login, public reporting, dashboards, profile
+  services/         Axios client, uploads URL handling
+  test/             UI and interaction tests
+backend/src/
+  controllers/      Authentication and four use-case controllers
+  middleware/       JWT, roles, ownership, upload and error handling
+  models/           Nine timestamped Mongoose models
+  routes/           REST API and role policies
+  services/         Patrol lifecycle, geofencing, repeatable seed
+  scripts/          Seed entry point
+  utils/            Validation and response helpers
+backend/tests/      API integration and unit tests
+backend/uploads/    Runtime local photographs (ignored by Git)
+docs/               Design critique and demonstration/report guides
 ```
 
-Only copy the examples if the corresponding `.env` does not already exist.
-Open http://localhost:5173. The backend runs at http://localhost:4000.
-The frontend proxies `/api` requests to the backend during development.
+Requests follow route → authorization/validation → controller/service → Mongoose. The API returns `{ "success": true, "message": "...", "data": ... }`; errors use `success: false` and `data: null`. All business data is persisted to MongoDB. There is no in-memory fallback in the application.
 
-## Add MongoDB later
+## Prerequisites
 
-Edit **backend/.env** and set:
+- Node.js **22.12+**, npm and Git.
+- A running local MongoDB server, or your own MongoDB Atlas cluster.
+- Internet access for the first dependency installation and temporary MongoDB test binary download.
+
+## Install and configure
+
+From the repository root in PowerShell:
+
+```powershell
+npm.cmd install
+if (!(Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
+if (!(Test-Path frontend/.env)) { Copy-Item frontend/.env.example frontend/.env }
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+```
+
+On other shells use `npm` instead of `npm.cmd`. The `.cmd` form also works around PowerShell execution policies that block `npm.ps1`.
+
+Edit **backend/.env** (not the tracked example) and paste the generated secret:
 
 ```dotenv
-MONGODB_URI=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER/conservex
+PORT=4000
+FRONTEND_ORIGIN=http://localhost:5173
+MONGODB_URI=mongodb://127.0.0.1:27017/wildlife_conservation
+JWT_SECRET=PASTE_YOUR_GENERATED_RANDOM_SECRET_HERE
 ```
 
-Use the actual connection string provided by your database, including its database name and required options. For a local server, use `mongodb://127.0.0.1:27017/conservex`.
-Keep credentials out of Git and frontend environment files. For Atlas, allow your development machine in Network Access and configure a database user. URL-encode special characters in credentials.
-Restart the backend after changing its environment, then run:
+`JWT_SECRET` must be at least 32 characters. Use a randomly generated value, not the example text. The server fails clearly if configuration is missing or MongoDB cannot connect.
+
+For **local MongoDB**, start your installed MongoDB service before seeding. For **Atlas**, create a database user and allow your development machine in Network Access. Set `MONGODB_URI` to the Atlas connection string with a database name, for example `mongodb+srv://USER:ENCODED_PASSWORD@HOST/wildlife_conservation`. URL-encode special characters in credentials. Never commit credentials or place them in frontend variables.
+
+**frontend/.env**:
+
+```dotenv
+VITE_API_URL=/api
+```
+
+Vite proxies `/api` and `/uploads` to `http://localhost:4000`. If you change the backend port, update the proxy in `frontend/vite.config.js` or set `VITE_API_URL=http://localhost:YOUR_PORT/api`. The older `VITE_API_BASE_URL` variable is still accepted for compatibility; `VITE_API_URL` takes precedence.
+
+## Seed and run
 
 ```powershell
-npm run seed
+npm.cmd run seed
+npm.cmd run dev
 ```
 
-Seeding upserts R001 (Ranger), M001 (Park Manager), and C001 (Community Liaison Officer), so it can be repeated safely.
+Open **http://localhost:5173**. API health: **http://localhost:4000/api/health**. Database readiness: **http://localhost:4000/api/ready**.
 
-With an empty URI, the API and frontend run with predefined demo users. Database-backed functionality remains unavailable; no records are silently saved in memory. A configured URI that cannot connect causes startup to fail with a configuration message.
-
-## Foundation API
-
-| Route                       | Purpose                                      |
-| --------------------------- | -------------------------------------------- |
-| GET /api/health             | API liveness and database status             |
-| GET /api/ready              | 200 when MongoDB is connected; otherwise 503 |
-| GET /api/demo-users         | Predefined development users                 |
-| GET /api/demo-users/:userId | One predefined user                          |
-
-Response format: `{ "success": true, "message": "...", "data": {} }`.
-Demo role selection is not authentication or server-side authorization. Add authorization before protected business operations are implemented.
-
-## Checks
+To run each workspace separately in two terminals:
 
 ```powershell
-npm run typecheck
-npm test
-npm run test:coverage
-npm run build
-npm run format:check
+npm.cmd run dev -w backend
+npm.cmd run dev -w frontend
 ```
 
-Coverage thresholds are 80% for shared services, controllers, middleware and utilities currently implemented. Expand coverage to each business module as it is developed. Database connectivity and seed persistence need a real database and are not exercised by the foundation tests.
+The seed creates three hashed-password accounts, Elephant E-042, Elephant E-018, Leopard L-007, collars GPS-C102/GPS-C118/GPS-C207, three risk zones, assigned/completed patrols, incidents, a community sighting and an alert. Re-running fills missing examples without deleting reports or resetting existing passwords. This is an explicit demo seed; do not run it against an unrelated database.
 
-Production build commands are `npm run build` and `npm run start -w backend`. Serve `frontend/dist` with your hosting provider and route `/api` to the backend, or set `VITE_API_BASE_URL` to the backend URL before building. Set `FRONTEND_ORIGIN` to the frontend origin.
+## Demo login accounts
 
-## Team workflow
+| Role                      | Email               | Password    |
+| ------------------------- | ------------------- | ----------- |
+| Park Manager              | manager@wildlife.lk | Manager123! |
+| Ranger                    | ranger@wildlife.lk  | Ranger123!  |
+| Community Liaison Officer | officer@wildlife.lk | Officer123! |
 
-Develop on `dev` and feature branches, never directly on `main`. Create feature branches from the stable `dev` foundation:
+Community reports require no login. Staff can access their own profile; user administration/password recovery is outside assignment scope. JWT sessions expire after eight hours and are stored in session storage.
+
+## REST API
+
+All routes below are under `/api`. Protected requests use `Authorization: Bearer <token>`.
+
+| Routes                                                                              | Access                                    |
+| ----------------------------------------------------------------------------------- | ----------------------------------------- |
+| `POST /auth/login`, `GET /health`, `GET /ready`                                     | Public                                    |
+| `GET /auth/me`                                                                      | Authenticated                             |
+| `GET /users`                                                                        | Manager                                   |
+| `POST /incidents`                                                                   | Ranger                                    |
+| `GET /incidents`, `GET /incidents/:id`, `GET /incidents/ranger/:rangerId`           | Manager; ranger restricted to own records |
+| `PATCH /incidents/:id/status`                                                       | Manager                                   |
+| `POST /patrols`                                                                     | Manager                                   |
+| `GET /patrols`, `GET /patrols/:id`, `GET /patrols/ranger/:rangerId`                 | Manager; ranger restricted to own patrols |
+| `PATCH /patrols/:id/start`, `POST /patrols/:id/waypoints`, `PATCH /patrols/:id/end` | Assigned ranger                           |
+| `GET /animals`, `GET /animals/:id`, `GET /collars`, `GET /risk-zones`               | Manager                                   |
+| `POST /collar-readings`, `GET /collar-readings/:collarId`                           | Manager                                   |
+| `GET /alerts`, `GET /alerts/:id`                                                    | All staff                                 |
+| `PATCH /alerts/:id/acknowledge`                                                     | Ranger or liaison                         |
+| `PATCH /alerts/:id/resolve`                                                         | Manager                                   |
+| `POST /community-reports`                                                           | Public, rate limited                      |
+| `GET /community-reports`, `GET /community-reports/:id`                              | Manager or liaison                        |
+| `PATCH /community-reports/:id/status`, `POST /community-reports/:id/response`       | Manager or liaison                        |
+
+Creation endpoints for incidents, waypoints and community reports accept JSON without a photo, or `multipart/form-data` with a `photo` field. Coordinates may be flat `latitude`/`longitude` fields or a `location` object in JSON. Community coordinates are optional as a pair. Photos accept PNG/JPEG/WebP signatures up to 5 MB; randomized names are stored under `backend/uploads` and served through `/uploads`.
+
+## Tests and build
 
 ```powershell
-git switch dev
-git switch -c feature/incident-management
+npm.cmd test
+npm.cmd run test:coverage
+npm.cmd run build
+npm.cmd run format:check
 ```
 
-Other branches: `feature/collar-monitoring`, `feature/patrol-management`, `feature/community-reporting`. Review feature pull requests into `dev`; merge into `main` after integration testing.
+For real-browser verification of all four workflows and mobile layouts:
 
-## Structure and scope
+```powershell
+npm.cmd exec -- playwright install chromium
+npm.cmd run test:e2e
+```
 
-- `frontend/src/modules/`: incidents, collars, patrols, community
-- `frontend/src/components/`, `services/`, `hooks/`, `utils/`: shared frontend foundation
-- `backend/src/routes/`, `controllers/`, `services/`, `repositories/`, `models/`, `middleware/`, `utils/`: modular API
-- `backend/tests/`: foundation API tests
+The browser test harness starts a disposable MongoDB database, an API on port 4100 and Vite on port 5174, then shuts them down. It never seeds your configured database. Browser screenshots/traces are written to ignored `test-results/`. `PLAYWRIGHT_EXECUTABLE_PATH` can select an existing Chromium executable. `MONGOMS_SYSTEM_BINARY` can select an existing MongoDB executable; a local `.local/mongod.exe`, if present, is also used by test helpers.
 
-The starter dashboard is a development placeholder pending the finalized wireframes. Business workflows, offline queues and automatic synchronization, maps, uploads, notifications, IoT/SMS simulators and authentication are subsequent feature work. IndexedDB (`idb`) and Leaflet dependencies are ready for those modules.
-See [CODEX_DEVELOPMENT_GUIDE.md](CODEX_DEVELOPMENT_GUIDE.md) for assignment scope and rules.
+Backend tests start an isolated local MongoDB process with `mongodb-memory-server`. They **never use `backend/.env`'s database URI**. The first run downloads a MongoDB binary; later runs use the cache. If downloads are restricted, supply your installed binary through `MONGOMS_SYSTEM_BINARY` before running tests. MongoDB process execution must be allowed by your machine's security policy.
+
+Backend checks cover login, validation, ownership, photos, full patrol lifecycle, early termination, public submissions and officer responses, safe/risk readings, concurrent alert deduplication, acknowledgements and resolution. Coverage thresholds are 80% for implemented controllers, patrol/tracking services, middleware and validation utilities. Frontend tests cover forms, API feedback, confirmation navigation, GPS fallback, photo size, protected routes and role dashboards. Frontend coverage reports the entire application and has no misleading global threshold.
+
+`npm run build` creates `frontend/dist` and syntax-checks backend JavaScript. Start a configured API with `npm run start -w backend`. A frontend host must serve `frontend/dist`, route client navigation to `index.html`, and proxy `/api` and `/uploads`; alternatively set the API origin at build time and configure `FRONTEND_ORIGIN`. Local uploads need persistent disk. There is no hosting deployment included.
+
+## Demonstration and design boundaries
+
+- Incident offline mode is **simulation only**: reports are saved normally with `Pending` or `Synced`. No real offline synchronization is claimed.
+- GPS collars and circular risk zones are simulated; Haversine distance is measured in metres. No real hardware, advanced GIS or paid map API is required.
+- The location component is a labeled schematic, not a navigational map.
+- Community response actions are recorded; there is no automatic dispatch or SMS gateway.
+- Alerts/dashboard data refresh every 30 seconds. Repeated readings preserve existing alert acknowledgements.
+- Use fictitious contact data. This university demonstration does not contact emergency services.
+
+See [Design critique](docs/DESIGN_CRITIQUE.md), [Screenshot guide](docs/SCREENSHOT_GUIDE.md), and [Live demonstration walkthrough](docs/DEMO_WALKTHROUGH.md). The older `CODEX_DEVELOPMENT_GUIDE.md` describes the original foundation; the current implementation follows the attached assignment scope documented here.
