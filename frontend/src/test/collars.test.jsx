@@ -100,6 +100,27 @@ describe('Collar monitoring screen', () => {
     );
   });
 
+  it('explains why a reading inside a zone did not create another alert', async () => {
+    api.post.mockResolvedValue({
+      data: { data: { alerts: [], insideRiskZone: true } },
+    });
+    mountTracking();
+    fireEvent.change(screen.getByLabelText(/GPS collar/), {
+      target: { value: 'GPS-C102' },
+    });
+    fireEvent.change(screen.getByLabelText('Simulated location'), {
+      target: { value: 'zone-1' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Simulate Collar Reading' }),
+    );
+    expect(
+      await screen.findByText(
+        /No new alert until the animal exits and re-enters/,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('loads saved collar reading history', async () => {
     api.get.mockResolvedValue({
       data: {

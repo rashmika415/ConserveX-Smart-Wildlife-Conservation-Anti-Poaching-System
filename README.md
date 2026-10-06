@@ -142,6 +142,8 @@ Creation endpoints for incidents, waypoints and community reports accept JSON wi
 
 On **Animal Tracking**, a manager can create a high-risk zone with a unique name, centre coordinates, radius in metres, and High or Critical risk level. The new zone appears in the simulator after saving. Choose **Simulate invalid collar ID** to demonstrate collar validation without changing stored collars. `POST /risk-zones` accepts JSON fields `zoneName`, optional `description`, `centerLatitude`, `centerLongitude`, `radius`, and `riskLevel`.
 
+Each reading records whether its collar is inside a high-risk zone. An open alert is updated by repeated inside readings. After an alert is resolved, a new alert requires a reading outside that zone followed by a reading inside it.
+
 ## Tests and build
 
 ```powershell

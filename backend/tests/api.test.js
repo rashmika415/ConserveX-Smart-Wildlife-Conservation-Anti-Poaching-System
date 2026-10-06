@@ -519,9 +519,25 @@ describe('Collar monitoring and alerts', () => {
     expect(
       (await auth('patch', `/api/alerts/${id}/resolve`, 'MANAGER')).status,
     ).toBe(409);
+    const stillInside = await auth(
+      'post',
+      '/api/collar-readings',
+      'MANAGER',
+    ).send(body);
+    expect(stillInside.status).toBe(201);
+    expect(stillInside.body.data.insideRiskZone).toBe(true);
+    expect(stillInside.body.data.alerts).toHaveLength(0);
+    expect(await Alert.countDocuments()).toBe(1);
+    const exit = await auth('post', '/api/collar-readings', 'MANAGER').send({
+      collarId: body.collarId,
+      latitude: 0,
+      longitude: 0,
+    });
+    expect(exit.body.data.insideRiskZone).toBe(false);
     const reentry = await auth('post', '/api/collar-readings', 'MANAGER').send(
       body,
     );
+    expect(reentry.status).toBe(201);
     expect(reentry.body.data.alerts[0]._id).not.toBe(id);
     expect(
       (

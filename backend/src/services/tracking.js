@@ -47,14 +47,11 @@ export async function recordReading(body) {
     ...point,
     timestamp,
   });
-  await Collar.updateOne(
-    { _id: collar._id },
-    { lastTransmission: timestamp, lastLocation: point },
-  );
   const zones = await RiskZone.find({
     riskLevel: { $in: ['High', 'Critical'] },
   });
   const alerts = [];
+  let insideRiskZone = false;
   for (const zone of zones) {
     if (
       distanceMeters(
@@ -65,6 +62,15 @@ export async function recordReading(body) {
       ) > zone.radius
     )
       continue;
+    insideRiskZone = true;
+    const wasInside =
+      collar.lastLocation &&
+      distanceMeters(
+        collar.lastLocation.latitude,
+        collar.lastLocation.longitude,
+        zone.centerLatitude,
+        zone.centerLongitude,
+      ) <= zone.radius;
     const filter = { animalId: animal._id, zoneId: zone._id, open: true };
     const update = {
       $set: {
@@ -79,7 +85,7 @@ export async function recordReading(body) {
     let alert;
     try {
       alert = await Alert.findOneAndUpdate(filter, update, {
-        upsert: true,
+        upsert: !wasInside,
         new: true,
         runValidators: true,
       });
@@ -87,7 +93,11 @@ export async function recordReading(body) {
       if (error.code !== 11000) throw error;
       alert = await Alert.findOneAndUpdate(filter, update, { new: true });
     }
-    alerts.push(alert);
+    if (alert) alerts.push(alert);
   }
-  return { reading, alerts };
+  await Collar.updateOne(
+    { _id: collar._id },
+    { lastTransmission: timestamp, lastLocation: point },
+  );
+  return { reading, alerts, insideRiskZone };
 }
