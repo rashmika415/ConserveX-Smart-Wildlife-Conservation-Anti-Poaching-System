@@ -84,6 +84,7 @@ export const Patrol = model(
     parkName: { type: String, required: true },
     rangerId: ref('User'),
     scheduledDate: { type: Date, required: true },
+    scheduledEndTime: Date,
     checkpoints: [{ name: String, location: point }],
     waypoints: [waypoint],
     startTime: Date,

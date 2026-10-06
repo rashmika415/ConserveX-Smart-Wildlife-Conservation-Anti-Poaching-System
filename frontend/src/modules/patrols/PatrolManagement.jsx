@@ -52,6 +52,8 @@ export default function PatrolManagement() {
                 <dd>{patrol.rangerId?.name}</dd>
                 <dt>Scheduled</dt>
                 <dd>{formatDate(patrol.scheduledDate)}</dd>
+                <dt>Scheduled end</dt>
+                <dd>{formatDate(patrol.scheduledEndTime)}</dd>
                 <dt>Checkpoints</dt>
                 <dd>{patrol.checkpoints.length}</dd>
               </dl>
@@ -76,6 +78,7 @@ export function CreatePatrol() {
     parkName: 'Yala National Park',
     rangerId: '',
     scheduledDate: '',
+    scheduledEndTime: '',
   });
   const [checkpoints, setCheckpoints] = useState([
     { name: '', latitude: '', longitude: '' },
@@ -94,6 +97,7 @@ export function CreatePatrol() {
       const { data } = await api.post('/patrols', {
         ...values,
         scheduledDate: new Date(values.scheduledDate).toISOString(),
+        scheduledEndTime: new Date(values.scheduledEndTime).toISOString(),
         checkpoints,
       });
       navigate(`/app/patrols/${data.data._id}`);
@@ -126,10 +130,17 @@ export function CreatePatrol() {
               {...field('parkName')}
             />
             <FormInput
-              label="Scheduled date and time"
+              label="Scheduled start time"
               type="datetime-local"
               required
               {...field('scheduledDate')}
+            />
+            <FormInput
+              label="Scheduled end time"
+              type="datetime-local"
+              required
+              min={values.scheduledDate || undefined}
+              {...field('scheduledEndTime')}
             />
             <FormInput
               label="Assign ranger"
