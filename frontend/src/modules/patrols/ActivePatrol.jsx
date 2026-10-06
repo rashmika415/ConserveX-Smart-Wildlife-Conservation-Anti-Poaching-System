@@ -209,9 +209,26 @@ export default function ActivePatrol() {
                   className="panel form-panel align-start"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    if (reason === 'Other' && !reasonDetails.trim()) {
-                      setError('Please describe the reason for ending early.');
-                      return;
+                    if (endStatus === 'Incomplete') {
+                      const form = event.currentTarget;
+                      const reasonField =
+                        form.elements.namedItem('incompleteReason');
+                      const detailsField = form.elements.namedItem(
+                        'incompleteReasonDetails',
+                      );
+                      reasonField.setCustomValidity(
+                        reason
+                          ? ''
+                          : 'Please fill this field: select a reason for ending early.',
+                      );
+                      if (detailsField) {
+                        detailsField.setCustomValidity(
+                          reasonDetails.trim()
+                            ? ''
+                            : 'Please fill this field: describe the reason for ending early.',
+                        );
+                      }
+                      if (!form.reportValidity()) return;
                     }
                     setError('');
                     setConfirm(true);
@@ -264,8 +281,17 @@ export default function ActivePatrol() {
                       <FormInput
                         label="Reason for ending early"
                         required
+                        name="incompleteReason"
                         value={reason}
-                        onChange={(e) => setReason(e.target.value)}
+                        onInvalid={(e) =>
+                          e.target.setCustomValidity(
+                            'Please fill this field: select a reason for ending early.',
+                          )
+                        }
+                        onChange={(e) => {
+                          e.target.setCustomValidity('');
+                          setReason(e.target.value);
+                        }}
                         options={[
                           '',
                           'Weather',
@@ -281,8 +307,21 @@ export default function ActivePatrol() {
                           multiline
                           required
                           maxLength={2000}
+                          name="incompleteReasonDetails"
                           value={reasonDetails}
-                          onChange={(e) => setReasonDetails(e.target.value)}
+                          onInvalid={(e) =>
+                            e.target.setCustomValidity(
+                              'Please fill this field: describe the reason for ending early.',
+                            )
+                          }
+                          onChange={(e) => {
+                            e.target.setCustomValidity(
+                              e.target.value.trim()
+                                ? ''
+                                : 'Please fill this field: describe the reason for ending early.',
+                            );
+                            setReasonDetails(e.target.value);
+                          }}
                         />
                       )}
                       <button className="button" disabled={busy}>
