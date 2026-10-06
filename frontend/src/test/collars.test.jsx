@@ -59,6 +59,73 @@ const mountTracking = () =>
   );
 
 describe('Collar monitoring screen', () => {
+  it('shows safe and high-risk simulator outcomes with the submitted coordinates', async () => {
+    api.post
+      .mockResolvedValueOnce({ data: { data: { alerts: [] } } })
+      .mockResolvedValueOnce({
+        data: { data: { alerts: [{ _id: 'alert-1' }] } },
+      });
+    mountTracking();
+    fireEvent.change(screen.getByLabelText(/GPS collar/), {
+      target: { value: 'GPS-C102' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Simulate Collar Reading' }),
+    );
+    expect(
+      await screen.findByText(/Outside high-risk zones/),
+    ).toBeInTheDocument();
+    expect(api.post).toHaveBeenNthCalledWith(1, '/collar-readings', {
+      collarId: 'GPS-C102',
+      latitude: 0,
+      longitude: 0,
+    });
+    fireEvent.change(screen.getByLabelText('Simulated location'), {
+      target: { value: 'zone-1' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Simulate Collar Reading' }),
+    );
+    expect(
+      await screen.findByText(/high-risk alert\(s\) created or updated/),
+    ).toBeInTheDocument();
+    expect(api.post).toHaveBeenNthCalledWith(2, '/collar-readings', {
+      collarId: 'GPS-C102',
+      latitude: 6.45,
+      longitude: 81.4,
+    });
+    expect(screen.getByRole('link', { name: /View alert/ })).toHaveAttribute(
+      'href',
+      '/app/alerts/alert-1',
+    );
+  });
+
+  it('loads saved collar reading history', async () => {
+    api.get.mockResolvedValue({
+      data: {
+        data: [
+          {
+            _id: 'reading-1',
+            timestamp: '2026-10-06T00:00:00.000Z',
+            latitude: 6.45,
+            longitude: 81.4,
+          },
+        ],
+      },
+    });
+    mountTracking();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Collar details & reading history' }),
+    );
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith('/collar-readings/GPS-C102'),
+    );
+    expect(
+      await screen.findByText('GPS-C102 · Recent readings'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '6.45' })).toBeInTheDocument();
+  });
+
   it('lets a manager simulate an invalid collar and shows the API error', async () => {
     api.post.mockRejectedValue({
       response: { data: { message: 'Collar not found' } },
