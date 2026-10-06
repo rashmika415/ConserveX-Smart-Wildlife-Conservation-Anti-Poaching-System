@@ -604,6 +604,37 @@ small {
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: 24px;
 }
+.patrol-side-panels {
+  display: grid;
+  align-content: start;
+  gap: 24px;
+  min-width: 0;
+}
+.patrol-termination-panel {
+  background: #eaf6ee;
+  border: 2px solid var(--green);
+  border-left-width: 6px;
+}
+.patrol-termination-panel h2,
+.patrol-termination-panel .details dt,
+.patrol-termination-panel .details dd {
+  color: #174b35;
+}
+.patrol-termination-panel .details dd {
+  font-weight: 600;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.patrol-termination-label {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--green);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
 .align-start {
   align-self: start;
 }

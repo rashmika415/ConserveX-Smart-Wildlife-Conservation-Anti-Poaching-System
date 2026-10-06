@@ -94,7 +94,7 @@ export default function ActivePatrol() {
                       <dd>{patrol.waypoints.length}</dd>
                     </>
                   )}
-                  {patrol.incompleteReason && (
+                  {patrol.incompleteReason && user.role !== 'MANAGER' && (
                     <>
                       <dt>Ended early</dt>
                       <dd>
@@ -124,19 +124,45 @@ export default function ActivePatrol() {
                   </Link>
                 )}
               </section>
-              <section className="panel">
-                <h2>Route checkpoints</h2>
-                <ol className="checkpoint-list">
-                  {patrol.checkpoints.map((point, index) => (
-                    <li key={point._id || index}>
-                      <strong>{point.name}</strong>
-                      <span>
-                        {point.location.latitude}, {point.location.longitude}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </section>
+              <div className="patrol-side-panels">
+                {user.role === 'MANAGER' && patrol.status === 'Incomplete' && (
+                  <section
+                    className="panel patrol-termination-panel"
+                    aria-labelledby="early-termination-heading"
+                  >
+                    <span className="patrol-termination-label">
+                      Patrol ended early
+                    </span>
+                    <h2 id="early-termination-heading">Early termination</h2>
+                    <dl className="details">
+                      <dt>Reason</dt>
+                      <dd>{patrol.incompleteReason || 'No reason recorded'}</dd>
+                      {patrol.incompleteReason === 'Other' &&
+                        patrol.incompleteReasonDetails && (
+                          <>
+                            <dt>Explanation</dt>
+                            <dd>{patrol.incompleteReasonDetails}</dd>
+                          </>
+                        )}
+                      <dt>Ended</dt>
+                      <dd>{formatDate(patrol.endTime)}</dd>
+                    </dl>
+                  </section>
+                )}
+                <section className="panel">
+                  <h2>Route checkpoints</h2>
+                  <ol className="checkpoint-list">
+                    {patrol.checkpoints.map((point, index) => (
+                      <li key={point._id || index}>
+                        <strong>{point.name}</strong>
+                        <span>
+                          {point.location.latitude}, {point.location.longitude}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              </div>
             </div>
             {user.role === 'RANGER' && patrol.status === 'Active' && (
               <div className="detail-grid section-gap">
