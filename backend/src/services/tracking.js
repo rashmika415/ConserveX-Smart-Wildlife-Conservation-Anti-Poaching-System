@@ -6,7 +6,21 @@ import {
   Alert,
 } from '../models/index.js';
 import { ApiError, requireRecord } from '../utils/apiError.js';
-import { text, location } from '../utils/validation.js';
+import { text, location, number, choice } from '../utils/validation.js';
+export async function createRiskZone(body) {
+  const point = location({
+    latitude: body.centerLatitude,
+    longitude: body.centerLongitude,
+  });
+  return RiskZone.create({
+    zoneName: text(body.zoneName, 'Zone name', true, 120),
+    description: text(body.description, 'Description', false),
+    centerLatitude: point.latitude,
+    centerLongitude: point.longitude,
+    radius: number(body.radius, 'Radius (metres)', 1, 100000),
+    riskLevel: choice(body.riskLevel, ['High', 'Critical'], 'risk level'),
+  });
+}
 export function distanceMeters(lat1, lon1, lat2, lon2) {
   const rad = (value) => (value * Math.PI) / 180;
   const a =

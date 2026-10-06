@@ -19,6 +19,7 @@ export function choice(value, choices, label) {
 export function number(value, label, min, max) {
   if (
     value === '' ||
+    (typeof value === 'string' && !value.trim()) ||
     value == null ||
     !['string', 'number'].includes(typeof value) ||
     !Number.isFinite(Number(value)) ||
