@@ -370,6 +370,44 @@ describe('Patrol lifecycle', () => {
   });
 });
 describe('Collar monitoring and alerts', () => {
+  test('alerts only for readings within a risk-zone radius', async () => {
+    const zone = await RiskZone.create({
+      zoneName: `Boundary test ${Date.now()}`,
+      centerLatitude: 0,
+      centerLongitude: 0,
+      radius: 1000,
+      riskLevel: 'High',
+    });
+    try {
+      const outside = await auth(
+        'post',
+        '/api/collar-readings',
+        'MANAGER',
+      ).send({
+        collarId: 'GPS-C118',
+        latitude: 0,
+        longitude: 0.0091,
+      });
+      expect(outside.status).toBe(201);
+      expect(outside.body.data.alerts).toHaveLength(0);
+      const inside = await auth('post', '/api/collar-readings', 'MANAGER').send(
+        {
+          collarId: 'GPS-C118',
+          latitude: 0,
+          longitude: 0.0089,
+        },
+      );
+      expect(inside.status).toBe(201);
+      expect(inside.body.data.alerts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ zoneId: String(zone._id) }),
+        ]),
+      );
+    } finally {
+      await Alert.deleteMany({ zoneId: zone._id });
+      await RiskZone.deleteOne({ _id: zone._id });
+    }
+  });
   test('manager defines a valid risk zone for future simulated readings', async () => {
     const zoneName = `Test zone ${Date.now()}`;
     const body = {
@@ -481,9 +519,25 @@ describe('Collar monitoring and alerts', () => {
     expect(
       (await auth('patch', `/api/alerts/${id}/resolve`, 'MANAGER')).status,
     ).toBe(409);
+    const stillInside = await auth(
+      'post',
+      '/api/collar-readings',
+      'MANAGER',
+    ).send(body);
+    expect(stillInside.status).toBe(201);
+    expect(stillInside.body.data.insideRiskZone).toBe(true);
+    expect(stillInside.body.data.alerts).toHaveLength(0);
+    expect(await Alert.countDocuments()).toBe(1);
+    const exit = await auth('post', '/api/collar-readings', 'MANAGER').send({
+      collarId: body.collarId,
+      latitude: 0,
+      longitude: 0,
+    });
+    expect(exit.body.data.insideRiskZone).toBe(false);
     const reentry = await auth('post', '/api/collar-readings', 'MANAGER').send(
       body,
     );
+    expect(reentry.status).toBe(201);
     expect(reentry.body.data.alerts[0]._id).not.toBe(id);
     expect(
       (

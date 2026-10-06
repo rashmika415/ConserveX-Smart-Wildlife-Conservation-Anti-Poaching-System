@@ -203,6 +203,8 @@ export default function AnimalTracking() {
                   View alert →
                 </Link>
               </>
+            ) : result.insideRiskZone ? (
+              'Inside a high-risk zone. No new alert until the animal exits and re-enters.'
             ) : (
               'Outside high-risk zones; no alert generated.'
             )}
