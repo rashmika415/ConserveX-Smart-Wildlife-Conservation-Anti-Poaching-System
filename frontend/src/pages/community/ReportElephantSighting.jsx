@@ -14,6 +14,8 @@ export default function ReportElephantSighting() {
     landmark: '',
     latitude: '',
     longitude: '',
+    town: '',
+    district: '',
     numberOfElephants: '',
     directionOfMovement: '',
     description: '',
@@ -85,7 +87,14 @@ export default function ReportElephantSighting() {
             {...field('directionOfMovement')}
           />
         </div>
-        <LocationInput values={values} setValues={setValues} optional />
+        <LocationInput
+          values={values}
+          setValues={setValues}
+          optional
+          onApplyLandmark={(placeName) =>
+            setValues((p) => ({ ...p, landmark: placeName }))
+          }
+        />
         <FormInput
           label="Description"
           multiline

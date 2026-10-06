@@ -2,12 +2,14 @@ import { useId, useState } from 'react';
 import {
   MapPin,
   LocateFixed,
+  Compass,
   LoaderCircle,
   Inbox,
   ArrowUpRight,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { photoUrl } from '../services/api';
+import { reverseGeocodeGeoapify } from '../services/geocode';
 export const formatDate = (value) =>
   value
     ? new Date(value).toLocaleString(undefined, {
@@ -149,11 +151,48 @@ export function PhotoUpload({ onChange }) {
     />
   );
 }
-export function LocationInput({ values, setValues, optional = false }) {
+export function LocationInput({
+  values,
+  setValues,
+  optional = false,
+  onApplyLandmark,
+}) {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [detectedPlace, setDetectedPlace] = useState(null);
+  const [detectingPlace, setDetectingPlace] = useState(false);
+
+  const identifyPlace = async (lat, lon) => {
+    if (!lat || !lon) return;
+    setDetectingPlace(true);
+    const place = await reverseGeocodeGeoapify(lat, lon);
+    setDetectingPlace(false);
+    if (place) {
+      setDetectedPlace(place);
+      setValues((prev) => ({
+        ...prev,
+        town: place.town || '',
+        district: place.district || '',
+      }));
+      if (onApplyLandmark && !values.landmark) {
+        onApplyLandmark(place.areaTitle || place.town || place.formatted);
+      }
+    }
+  };
+
+  function updateCoords(newLat, newLng, feedback) {
+    setValues((previous) => ({
+      ...previous,
+      latitude: newLat,
+      longitude: newLng,
+    }));
+    if (feedback) setSuccessMsg(feedback);
+    setError('');
+    setShowMap(true);
+    identifyPlace(newLat, newLng);
+  }
 
   function locate() {
     if (!navigator.geolocation) {
@@ -167,13 +206,9 @@ export function LocationInput({ values, setValues, optional = false }) {
     const tryPosition = (highAccuracy = false) => {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setValues((previous) => ({
-            ...previous,
-            latitude: position.coords.latitude.toFixed(6),
-            longitude: position.coords.longitude.toFixed(6),
-          }));
-          setSuccessMsg('✓ Current coordinates captured from your device.');
-          setShowMap(true);
+          const lat = position.coords.latitude.toFixed(6);
+          const lng = position.coords.longitude.toFixed(6);
+          updateCoords(lat, lng, '✓ Current coordinates captured from your device.');
           setBusy(false);
         },
         (geoError) => {
@@ -220,9 +255,11 @@ export function LocationInput({ values, setValues, optional = false }) {
           max="90"
           required={!optional || !!values.longitude}
           value={values.latitude}
-          onChange={(e) =>
-            setValues((p) => ({ ...p, latitude: e.target.value }))
-          }
+          onChange={(e) => {
+            const val = e.target.value;
+            setValues((p) => ({ ...p, latitude: val }));
+            if (val && values.longitude) identifyPlace(val, values.longitude);
+          }}
         />
         <FormInput
           label="Longitude"
@@ -232,9 +269,11 @@ export function LocationInput({ values, setValues, optional = false }) {
           max="180"
           required={!optional || !!values.latitude}
           value={values.longitude}
-          onChange={(e) =>
-            setValues((p) => ({ ...p, longitude: e.target.value }))
-          }
+          onChange={(e) => {
+            const val = e.target.value;
+            setValues((p) => ({ ...p, longitude: val }));
+            if (val && values.latitude) identifyPlace(values.latitude, val);
+          }}
         />
       </div>
 
@@ -251,15 +290,68 @@ export function LocationInput({ values, setValues, optional = false }) {
         <button
           type="button"
           className="text-button"
+          onClick={() => {
+            updateCoords(
+              '6.450000',
+              '81.400000',
+              '✓ Simulated device GPS coordinates captured (Yala Sector).',
+            );
+          }}
+        >
+          <Compass size={16} />
+          Simulate device GPS
+        </button>
+        <button
+          type="button"
+          className="text-button"
           onClick={() => setShowMap((prev) => !prev)}
         >
           <MapPin size={16} />
-          {showMap || hasCoords ? 'Hide map pin' : 'Pick on schematic map'}
+          {showMap ? 'Hide map' : 'Pick on schematic map'}
         </button>
       </div>
 
       {successMsg && <div className="location-success">{successMsg}</div>}
       {error && <small role="alert">{error}</small>}
+
+      {detectingPlace && (
+        <div className="location-detecting">
+          <LoaderCircle size={14} className="spin" />
+          <span>Identifying town & area details via Geoapify API…</span>
+        </div>
+      )}
+
+      {detectedPlace && !detectingPlace && (
+        <div className="detected-place-card">
+          <div className="place-header">
+            <span className="place-title">
+              <MapPin size={15} />
+              <strong>
+                {detectedPlace.areaTitle || detectedPlace.town || 'Detected Area'}
+              </strong>
+            </span>
+            {detectedPlace.province && (
+              <span className="place-tag">{detectedPlace.province}</span>
+            )}
+          </div>
+          <p className="place-address">{detectedPlace.formatted}</p>
+          {onApplyLandmark && (
+            <button
+              type="button"
+              className="text-button small use-landmark-btn"
+              onClick={() => {
+                onApplyLandmark(
+                  detectedPlace.areaTitle ||
+                    detectedPlace.town ||
+                    detectedPlace.formatted,
+                );
+              }}
+            >
+              Apply to Nearest Landmark
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="location-presets">
         <span className="preset-label">Quick wildlife sighting presets:</span>
@@ -277,13 +369,13 @@ export function LocationInput({ values, setValues, optional = false }) {
               onClick={() => {
                 setValues((p) => ({
                   ...p,
-                  latitude: preset.lat,
-                  longitude: preset.lng,
                   ...(!p.landmark ? { landmark: preset.label } : {}),
                 }));
-                setSuccessMsg(`✓ Selected preset: ${preset.label}`);
-                setError('');
-                setShowMap(true);
+                updateCoords(
+                  preset.lat,
+                  preset.lng,
+                  `✓ Selected preset: ${preset.label}`,
+                );
               }}
             >
               {preset.label}
@@ -307,6 +399,7 @@ export function LocationInput({ values, setValues, optional = false }) {
                 onClick={() => {
                   setValues((p) => ({ ...p, latitude: '', longitude: '' }));
                   setSuccessMsg('');
+                  setDetectedPlace(null);
                 }}
               >
                 Clear coordinates
@@ -324,9 +417,7 @@ export function LocationInput({ values, setValues, optional = false }) {
             }
             interactive
             onSelectLocation={(lat, lng) => {
-              setValues((p) => ({ ...p, latitude: lat, longitude: lng }));
-              setSuccessMsg(`✓ Pin placed at ${lat}, ${lng}`);
-              setError('');
+              updateCoords(lat, lng, `✓ Pin placed at ${lat}, ${lng}`);
             }}
           />
           <small
@@ -397,7 +488,7 @@ export function LocationMap({
           <span>Reported location</span>
         </div>
       )}
-      <div className="map-caption">
+      <div className="map-caption" onClick={(e) => e.stopPropagation()}>
         {location ? (
           <>
             <strong>
