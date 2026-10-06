@@ -151,7 +151,10 @@ export function PhotoUpload({ onChange }) {
 }
 export function LocationInput({ values, setValues, optional = false }) {
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
   function locate() {
     if (!navigator.geolocation) {
       setError('GPS is unavailable. Enter coordinates manually.');
@@ -159,22 +162,52 @@ export function LocationInput({ values, setValues, optional = false }) {
     }
     setBusy(true);
     setError('');
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setValues((previous) => ({
-          ...previous,
-          latitude: position.coords.latitude.toFixed(6),
-          longitude: position.coords.longitude.toFixed(6),
-        }));
-        setBusy(false);
-      },
-      () => {
-        setError('Could not get GPS location. Enter coordinates manually.');
-        setBusy(false);
-      },
-      { timeout: 10000, enableHighAccuracy: true },
-    );
+    setSuccessMsg('');
+
+    const tryPosition = (highAccuracy = false) => {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setValues((previous) => ({
+            ...previous,
+            latitude: position.coords.latitude.toFixed(6),
+            longitude: position.coords.longitude.toFixed(6),
+          }));
+          setSuccessMsg('✓ Current coordinates captured from your device.');
+          setShowMap(true);
+          setBusy(false);
+        },
+        (geoError) => {
+          if (!highAccuracy) {
+            tryPosition(true);
+            return;
+          }
+          let msg = 'Could not get GPS location. Enter coordinates manually.';
+          if (geoError?.code === 1) {
+            msg =
+              'Location permission was denied in your browser. Enter coordinates manually or select a preset location below.';
+          } else if (geoError?.code === 2) {
+            msg =
+              'GPS signal unavailable on this device. Enter coordinates manually or select a preset location below.';
+          } else if (geoError?.code === 3) {
+            msg =
+              'GPS request timed out. Enter coordinates manually or select a preset location below.';
+          }
+          setError(msg);
+          setBusy(false);
+        },
+        {
+          timeout: highAccuracy ? 8000 : 5000,
+          enableHighAccuracy: highAccuracy,
+          maximumAge: 300000,
+        },
+      );
+    };
+
+    tryPosition(false);
   }
+
+  const hasCoords = !!values.latitude && !!values.longitude;
+
   return (
     <fieldset className="location-input">
       <legend>Location {optional ? '(optional)' : ''}</legend>
@@ -204,45 +237,183 @@ export function LocationInput({ values, setValues, optional = false }) {
           }
         />
       </div>
-      <button
-        type="button"
-        className="text-button"
-        disabled={busy}
-        onClick={locate}
-      >
-        <LocateFixed size={16} />
-        {busy ? 'Locating…' : 'Use my current location'}
-      </button>
+
+      <div className="location-actions">
+        <button
+          type="button"
+          className="text-button"
+          disabled={busy}
+          onClick={locate}
+        >
+          <LocateFixed size={16} />
+          {busy ? 'Locating…' : 'Use my current location'}
+        </button>
+        <button
+          type="button"
+          className="text-button"
+          onClick={() => setShowMap((prev) => !prev)}
+        >
+          <MapPin size={16} />
+          {showMap || hasCoords ? 'Hide map pin' : 'Pick on schematic map'}
+        </button>
+      </div>
+
+      {successMsg && <div className="location-success">{successMsg}</div>}
       {error && <small role="alert">{error}</small>}
+
+      <div className="location-presets">
+        <span className="preset-label">Quick wildlife sighting presets:</span>
+        <div className="preset-buttons">
+          {[
+            { label: 'Palatupana Water Tank', lat: '6.372500', lng: '81.520400' },
+            { label: 'Yala Menik River', lat: '6.450000', lng: '81.400000' },
+            { label: 'Udawalawe Border', lat: '6.474600', lng: '80.884500' },
+            { label: 'Minneriya Corridor', lat: '8.032400', lng: '80.825600' },
+          ].map((preset) => (
+            <button
+              key={preset.label}
+              type="button"
+              className="preset-chip"
+              onClick={() => {
+                setValues((p) => ({
+                  ...p,
+                  latitude: preset.lat,
+                  longitude: preset.lng,
+                  ...(!p.landmark ? { landmark: preset.label } : {}),
+                }));
+                setSuccessMsg(`✓ Selected preset: ${preset.label}`);
+                setError('');
+                setShowMap(true);
+              }}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {(showMap || hasCoords) && (
+        <div className="location-preview-box">
+          <div className="preview-header">
+            <span>
+              {hasCoords
+                ? `Pinned GPS: ${values.latitude}, ${values.longitude}`
+                : 'Click map to place pin'}
+            </span>
+            {hasCoords && (
+              <button
+                type="button"
+                className="text-button small"
+                onClick={() => {
+                  setValues((p) => ({ ...p, latitude: '', longitude: '' }));
+                  setSuccessMsg('');
+                }}
+              >
+                Clear coordinates
+              </button>
+            )}
+          </div>
+          <LocationMap
+            location={
+              hasCoords
+                ? {
+                    latitude: Number(values.latitude),
+                    longitude: Number(values.longitude),
+                  }
+                : null
+            }
+            interactive
+            onSelectLocation={(lat, lng) => {
+              setValues((p) => ({ ...p, latitude: lat, longitude: lng }));
+              setSuccessMsg(`✓ Pin placed at ${lat}, ${lng}`);
+              setError('');
+            }}
+          />
+          <small
+            className="muted"
+            style={{ display: 'block', marginTop: '6px' }}
+          >
+            Tip: You can click anywhere on the map to set or move the GPS coordinates pin.
+          </small>
+        </div>
+      )}
     </fieldset>
   );
 }
-export function LocationMap({ location, zone }) {
-  if (!location)
+export function LocationMap({
+  location,
+  zone,
+  interactive = false,
+  onSelectLocation,
+}) {
+  if (!location && !interactive)
     return (
       <div className="map-empty">
         Coordinates were not supplied. Refer to the landmark.
       </div>
     );
+
+  const lat = location ? Number(location.latitude) : 6.45;
+  const lng = location ? Number(location.longitude) : 81.40;
+  let leftPercent = 50;
+  let topPercent = 38;
+  if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+    const normX = Math.min(Math.max((lng - 80.0) / 2.0, 0.05), 0.95);
+    const normY = Math.min(Math.max((8.8 - lat) / 2.8, 0.05), 0.85);
+    leftPercent = (normX * 100).toFixed(1);
+    topPercent = (normY * 100).toFixed(1);
+  }
+
+  function handleMapClick(e) {
+    if (!onSelectLocation) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = Math.min(
+      Math.max((e.clientX - rect.left) / rect.width, 0),
+      1,
+    );
+    const clickY = Math.min(
+      Math.max((e.clientY - rect.top) / rect.height, 0),
+      1,
+    );
+    const newLng = (80.0 + clickX * 2.0).toFixed(6);
+    const newLat = (8.8 - clickY * 2.8).toFixed(6);
+    onSelectLocation(newLat, newLng);
+  }
+
   return (
-    <div className="location-map">
+    <div
+      className={`location-map ${interactive ? 'interactive' : ''}`}
+      onClick={handleMapClick}
+      title={interactive ? 'Click to pin GPS coordinates' : undefined}
+    >
       <div className="map-grid" />
       {zone && <div className="risk-ring" />}
-      <div className="map-marker">
-        <MapPin size={30} fill="currentColor" />
-        <span>Reported location</span>
-      </div>
+      {location && (
+        <div
+          className="map-marker"
+          style={{ left: `${leftPercent}%`, top: `${topPercent}%` }}
+        >
+          <MapPin size={30} fill="currentColor" />
+          <span>Reported location</span>
+        </div>
+      )}
       <div className="map-caption">
-        <strong>
-          {Number(location.latitude).toFixed(5)},{' '}
-          {Number(location.longitude).toFixed(5)}
-        </strong>
-        <span>
-          {zone
-            ? `${zone.zoneName} · radius ${zone.radius} m`
-            : 'Location reference'}{' '}
-          · schematic, not to scale
-        </span>
+        {location ? (
+          <>
+            <strong>
+              {Number(location.latitude).toFixed(5)},{' '}
+              {Number(location.longitude).toFixed(5)}
+            </strong>
+            <span>
+              {zone
+                ? `${zone.zoneName} · radius ${zone.radius} m`
+                : 'Location reference'}{' '}
+              · schematic{interactive ? ' (click to reposition)' : ', not to scale'}
+            </span>
+          </>
+        ) : (
+          <span>Click anywhere on the map grid to place a GPS pin</span>
+        )}
       </div>
     </div>
   );
