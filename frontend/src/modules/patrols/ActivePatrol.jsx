@@ -31,6 +31,7 @@ export default function ActivePatrol() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
+  const [endOptionsOpen, setEndOptionsOpen] = useState(false);
   const [endStatus, setEndStatus] = useState('Completed');
   const [reason, setReason] = useState('');
   const [confirm, setConfirm] = useState(false);
@@ -183,31 +184,65 @@ export default function ActivePatrol() {
                   <p className="muted">
                     Ending a patrol saves its duration and final summary.
                   </p>
-                  <FormInput
-                    label="Outcome"
-                    value={endStatus}
-                    onChange={(e) => setEndStatus(e.target.value)}
-                    options={['Completed', 'Incomplete']}
-                  />
-                  {endStatus === 'Incomplete' && (
-                    <FormInput
-                      label="Reason for ending early"
-                      required
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      options={[
-                        '',
-                        'Weather',
-                        'Injury',
-                        'Hazard',
-                        'Called Back',
-                        'Other',
-                      ]}
-                    />
-                  )}
-                  <button className="button" disabled={busy}>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={busy}
+                    aria-expanded={endOptionsOpen}
+                    aria-controls="patrol-end-options"
+                    onClick={() => {
+                      setEndOptionsOpen((open) => !open);
+                      setEndStatus('Completed');
+                      setReason('');
+                    }}
+                  >
                     End Patrol
                   </button>
+                  {endOptionsOpen && (
+                    <div id="patrol-end-options" className="button-row">
+                      <button
+                        type="button"
+                        className="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setEndStatus('Completed');
+                          setReason('');
+                          setConfirm(true);
+                        }}
+                      >
+                        Complete Patrol
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        disabled={busy}
+                        onClick={() => setEndStatus('Incomplete')}
+                      >
+                        Terminate Early
+                      </button>
+                    </div>
+                  )}
+                  {endOptionsOpen && endStatus === 'Incomplete' && (
+                    <>
+                      <FormInput
+                        label="Reason for ending early"
+                        required
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        options={[
+                          '',
+                          'Weather',
+                          'Injury',
+                          'Hazard',
+                          'Called Back',
+                          'Other',
+                        ]}
+                      />
+                      <button className="button" disabled={busy}>
+                        Confirm early termination
+                      </button>
+                    </>
+                  )}
                 </form>
               </div>
             )}
