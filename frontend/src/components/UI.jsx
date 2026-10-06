@@ -42,7 +42,11 @@ export function StatusBadge({ status }) {
     <span
       className={`badge badge-${String(status).toLowerCase().replaceAll(' ', '-')}`}
     >
-      {status === 'Pending' ? 'Pending Sync' : status}
+      {status === 'Pending'
+        ? 'Pending Sync'
+        : status === 'Incomplete'
+          ? 'Terminated'
+          : status}
     </span>
   );
 }
