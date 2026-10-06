@@ -94,17 +94,6 @@ export default function ActivePatrol() {
                       <dd>{patrol.waypoints.length}</dd>
                     </>
                   )}
-                  {patrol.incompleteReason && user.role !== 'MANAGER' && (
-                    <>
-                      <dt>Ended early</dt>
-                      <dd>
-                        {patrol.incompleteReason === 'Other' &&
-                        patrol.incompleteReasonDetails
-                          ? `Other: ${patrol.incompleteReasonDetails}`
-                          : patrol.incompleteReason}
-                      </dd>
-                    </>
-                  )}
                 </dl>
                 {user.role === 'RANGER' && patrol.status === 'Assigned' && (
                   <button
@@ -125,7 +114,7 @@ export default function ActivePatrol() {
                 )}
               </section>
               <div className="patrol-side-panels">
-                {user.role === 'MANAGER' && patrol.status === 'Incomplete' && (
+                {patrol.status === 'Incomplete' && (
                   <section
                     className="panel patrol-termination-panel"
                     aria-labelledby="early-termination-heading"
