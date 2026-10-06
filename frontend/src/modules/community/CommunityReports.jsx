@@ -123,6 +123,15 @@ export function CommunityReportDetails() {
                   <dd>{report.numberOfElephants}</dd>
                   <dt>Movement</dt>
                   <dd>{report.directionOfMovement || 'Not supplied'}</dd>
+                  {report.town && (
+                    <>
+                      <dt>Detected Town</dt>
+                      <dd>
+                        {report.town}
+                        {report.district ? ` · ${report.district}` : ''}
+                      </dd>
+                    </>
+                  )}
                   <dt>Reported</dt>
                   <dd>{formatDate(report.createdAt)}</dd>
                   <dt>Contact</dt>

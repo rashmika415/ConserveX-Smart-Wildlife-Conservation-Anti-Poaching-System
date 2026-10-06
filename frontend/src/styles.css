@@ -966,6 +966,143 @@ small {
   display: grid;
   place-items: center;
 }
+.location-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+}
+.location-presets {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.preset-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 7px;
+  font-weight: 600;
+}
+.preset-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.preset-chip {
+  background: #eef3ea;
+  border: 1px solid #d4decb;
+  border-radius: 6px;
+  color: var(--forest);
+  font-size: 0.73rem;
+  padding: 5px 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.preset-chip:hover {
+  background: #e2ecd9;
+  border-color: #a4be73;
+}
+.location-preview-box {
+  margin-top: 16px;
+}
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--forest);
+}
+.text-button.small {
+  font-size: 0.72rem;
+  color: #a84034;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.location-success {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #2e6d47;
+  background: #eaf5ec;
+  border: 1px solid #c8e4cf;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin-top: 8px;
+}
+.location-map.interactive {
+  cursor: crosshair;
+}
+.location-detecting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.74rem;
+  color: #315c41;
+  font-weight: 600;
+}
+.location-detecting svg {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.detected-place-card {
+  margin-top: 12px;
+  background: #f7faf5;
+  border: 1px solid #cbe0ce;
+  border-radius: 8px;
+  padding: 11px 14px;
+}
+.place-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.place-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--forest);
+  font-size: 0.8rem;
+}
+.place-tag {
+  background: #e2edd8;
+  color: #3b6b45;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+.place-address {
+  margin: 4px 0 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.use-landmark-btn {
+  color: var(--green) !important;
+  font-weight: 600;
+  text-decoration: underline;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
 .report-photo {
   display: block;
   width: 100%;

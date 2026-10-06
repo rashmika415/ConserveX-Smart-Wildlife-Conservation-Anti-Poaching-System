@@ -23,6 +23,8 @@ export async function create(req, res) {
     ),
     description: text(body.description, 'Description', false),
     contact: text(body.contact, 'Contact', false, 120),
+    town: text(body.town, 'Town', false, 150),
+    district: text(body.district, 'District', false, 150),
     imageUrl: req.imageUrl,
   });
   success(

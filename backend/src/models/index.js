@@ -179,6 +179,8 @@ export const CommunityReport = model('CommunityReport', {
   description: String,
   imageUrl: String,
   contact: String,
+  town: String,
+  district: String,
   status: enumField(
     ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'],
     'New',
