@@ -14,12 +14,14 @@
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "test:coverage": "npm run test:coverage --workspaces",
-    "typecheck": "npm run typecheck --workspaces",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "seed": "npm run seed -w backend"
+    "seed": "npm run seed -w backend",
+    "check": "npm run build && npm test",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitest/coverage-v8": "^4.1.11",
     "concurrently": "^9.2.0",
     "prettier": "^3.6.0",

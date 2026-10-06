@@ -3,3 +3,6 @@ package-lock.json
 dist
 coverage
 CODEX_DEVELOPMENT_GUIDE.md
+.local
+test-results
+playwright-report
