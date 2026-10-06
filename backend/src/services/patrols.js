@@ -100,6 +100,15 @@ export async function endPatrol(id, user, body) {
           'early termination reason',
         )
       : undefined;
+  const incompleteReasonDetails =
+    incompleteReason === 'Other'
+      ? text(
+          body.incompleteReasonDetails,
+          'Early termination reason details',
+          true,
+          2000,
+        )
+      : undefined;
   const endTime = new Date();
   const result = await Patrol.findOneAndUpdate(
     { _id: id, status: 'Active' },
@@ -107,6 +116,7 @@ export async function endPatrol(id, user, body) {
       status,
       endTime,
       incompleteReason,
+      incompleteReasonDetails,
       durationMinutes: Math.round((endTime - patrol.startTime) / 60000),
     },
     { new: true, runValidators: true },

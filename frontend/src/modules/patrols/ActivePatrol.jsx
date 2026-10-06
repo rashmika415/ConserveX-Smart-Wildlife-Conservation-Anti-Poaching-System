@@ -34,6 +34,7 @@ export default function ActivePatrol() {
   const [endOptionsOpen, setEndOptionsOpen] = useState(false);
   const [endStatus, setEndStatus] = useState('Completed');
   const [reason, setReason] = useState('');
+  const [reasonDetails, setReasonDetails] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [formKey, setFormKey] = useState(0);
   async function action(path, body, method = 'patch') {
@@ -96,7 +97,12 @@ export default function ActivePatrol() {
                   {patrol.incompleteReason && (
                     <>
                       <dt>Ended early</dt>
-                      <dd>{patrol.incompleteReason}</dd>
+                      <dd>
+                        {patrol.incompleteReason === 'Other' &&
+                        patrol.incompleteReasonDetails
+                          ? `Other: ${patrol.incompleteReasonDetails}`
+                          : patrol.incompleteReason}
+                      </dd>
                     </>
                   )}
                 </dl>
@@ -177,6 +183,11 @@ export default function ActivePatrol() {
                   className="panel form-panel align-start"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    if (reason === 'Other' && !reasonDetails.trim()) {
+                      setError('Please describe the reason for ending early.');
+                      return;
+                    }
+                    setError('');
                     setConfirm(true);
                   }}
                 >
@@ -238,6 +249,16 @@ export default function ActivePatrol() {
                           'Other',
                         ]}
                       />
+                      {reason === 'Other' && (
+                        <FormInput
+                          label="Describe the reason for ending early"
+                          multiline
+                          required
+                          maxLength={2000}
+                          value={reasonDetails}
+                          onChange={(e) => setReasonDetails(e.target.value)}
+                        />
+                      )}
                       <button className="button" disabled={busy}>
                         Confirm early termination
                       </button>
@@ -280,7 +301,13 @@ export default function ActivePatrol() {
           busy={busy}
           onCancel={() => setConfirm(false)}
           onConfirm={() =>
-            action('end', { status: endStatus, incompleteReason: reason })
+            action('end', {
+              status: endStatus,
+              incompleteReason: reason,
+              ...(endStatus === 'Incomplete' && reason === 'Other'
+                ? { incompleteReasonDetails: reasonDetails.trim() }
+                : {}),
+            })
           }
         />
       )}
