@@ -370,6 +370,74 @@ describe('Patrol lifecycle', () => {
   });
 });
 describe('Collar monitoring and alerts', () => {
+  test('manager defines a valid risk zone for future simulated readings', async () => {
+    const zoneName = `Test zone ${Date.now()}`;
+    const body = {
+      zoneName,
+      description: 'New test area',
+      centerLatitude: 7.25,
+      centerLongitude: 80.25,
+      radius: 250,
+      riskLevel: 'Critical',
+    };
+    expect((await auth('post', '/api/risk-zones').send(body)).status).toBe(403);
+    const created = await auth('post', '/api/risk-zones', 'MANAGER').send(body);
+    expect(created.status).toBe(201);
+    expect(created.body.data).toMatchObject(body);
+    expect((await RiskZone.findOne({ zoneName })).radius).toBe(250);
+    expect((await auth('get', '/api/risk-zones', 'MANAGER')).body.data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ zoneName })]),
+    );
+    const detected = await auth('post', '/api/collar-readings', 'MANAGER').send(
+      {
+        collarId: 'GPS-C207',
+        latitude: body.centerLatitude,
+        longitude: body.centerLongitude,
+      },
+    );
+    expect(detected.status).toBe(201);
+    expect(detected.body.data.alerts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ zoneId: created.body.data._id }),
+      ]),
+    );
+    expect(
+      (await auth('post', '/api/risk-zones', 'MANAGER').send(body)).status,
+    ).toBe(409);
+    for (const [index, invalid] of [
+      { centerLatitude: '   ' },
+      { centerLongitude: 181 },
+      { radius: 0 },
+      { riskLevel: 'Low' },
+      { zoneName: '' },
+    ].entries()) {
+      expect(
+        (
+          await auth('post', '/api/risk-zones', 'MANAGER').send({
+            ...body,
+            zoneName: `${zoneName} invalid ${index}`,
+            ...invalid,
+          })
+        ).status,
+      ).toBe(400);
+    }
+    await Alert.deleteMany({ zoneId: created.body.data._id });
+    await RiskZone.deleteOne({ zoneName });
+  });
+  test('rejects blank collar coordinates before saving a reading', async () => {
+    const before = await CollarReading.countDocuments({ collarId: 'GPS-C102' });
+    const response = await auth('post', '/api/collar-readings', 'MANAGER').send(
+      {
+        collarId: 'GPS-C102',
+        latitude: '   ',
+        longitude: '   ',
+      },
+    );
+    expect(response.status).toBe(400);
+    expect(await CollarReading.countDocuments({ collarId: 'GPS-C102' })).toBe(
+      before,
+    );
+  });
   test('saves safe and risk readings, deduplicates alerts and records acknowledgement', async () => {
     await Alert.deleteMany({});
     const safe = await auth('post', '/api/collar-readings', 'MANAGER').send({

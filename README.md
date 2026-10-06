@@ -4,12 +4,12 @@ A mobile-friendly university assignment application connecting park managers, ra
 
 ## Implemented use cases
 
-| Member | Use case                          | Complete flow                                                                                                                                                     |
-| ------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1      | Incident Management               | Ranger reports an incident with GPS/manual location and optional photo → confirmation → own history → manager review/status update.                               |
-| 2      | GPS Collar / High-Risk Zone Alert | Manager simulates a collar reading → MongoDB stores movement → circular zone detection creates/updates an alert → ranger/liaison acknowledges → manager resolves. |
-| 3      | Patrol Management                 | Manager creates route/checkpoints and assigns ranger → ranger starts → records waypoints/photos → completes or ends early with reason → manager views summary.    |
-| 4      | Community Reporting               | Public sighting without login → receipt → authorized staff review → response action with actor/time → status update.                                              |
+| Member | Use case                          | Complete flow                                                                                                                                                                        |
+| ------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1      | Incident Management               | Ranger reports an incident with GPS/manual location and optional photo → confirmation → own history → manager review/status update.                                                  |
+| 2      | GPS Collar / High-Risk Zone Alert | Manager defines a circular risk zone and simulates a collar reading → MongoDB stores movement → detection creates/updates an alert → ranger/liaison acknowledges → manager resolves. |
+| 3      | Patrol Management                 | Manager creates route/checkpoints and assigns ranger → ranger starts → records waypoints/photos → completes or ends early with reason → manager views summary.                       |
+| 4      | Community Reporting               | Public sighting without login → receipt → authorized staff review → response action with actor/time → status update.                                                                 |
 
 Role-specific dashboards combine saved records, open counts and recent activity. The interface includes mobile navigation, status badges, loading/empty states, filters, confirmation dialogs and schematic coordinate cards. No paid API or hardware is required.
 
@@ -129,6 +129,7 @@ All routes below are under `/api`. Protected requests use `Authorization: Bearer
 | `GET /patrols`, `GET /patrols/:id`, `GET /patrols/ranger/:rangerId`                 | Manager; ranger restricted to own patrols |
 | `PATCH /patrols/:id/start`, `POST /patrols/:id/waypoints`, `PATCH /patrols/:id/end` | Assigned ranger                           |
 | `GET /animals`, `GET /animals/:id`, `GET /collars`, `GET /risk-zones`               | Manager                                   |
+| `POST /risk-zones`                                                                  | Manager                                   |
 | `POST /collar-readings`, `GET /collar-readings/:collarId`                           | Manager                                   |
 | `GET /alerts`, `GET /alerts/:id`                                                    | All staff                                 |
 | `PATCH /alerts/:id/acknowledge`                                                     | Ranger or liaison                         |
@@ -138,6 +139,8 @@ All routes below are under `/api`. Protected requests use `Authorization: Bearer
 | `PATCH /community-reports/:id/status`, `POST /community-reports/:id/response`       | Manager or liaison                        |
 
 Creation endpoints for incidents, waypoints and community reports accept JSON without a photo, or `multipart/form-data` with a `photo` field. Coordinates may be flat `latitude`/`longitude` fields or a `location` object in JSON. Community coordinates are optional as a pair. Photos accept PNG/JPEG/WebP signatures up to 5 MB; randomized names are stored under `backend/uploads` and served through `/uploads`.
+
+On **Animal Tracking**, a manager can create a high-risk zone with a unique name, centre coordinates, radius in metres, and High or Critical risk level. The new zone appears in the simulator after saving. Choose **Simulate invalid collar ID** to demonstrate collar validation without changing stored collars. `POST /risk-zones` accepts JSON fields `zoneName`, optional `description`, `centerLatitude`, `centerLongitude`, `radius`, and `riskLevel`.
 
 ## Tests and build
 

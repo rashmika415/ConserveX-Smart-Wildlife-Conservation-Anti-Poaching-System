@@ -123,9 +123,9 @@ export const CollarReading = model('CollarReading', {
 export const RiskZone = model('RiskZone', {
   zoneName: { type: String, required: true, unique: true },
   description: String,
-  centerLatitude: Number,
-  centerLongitude: Number,
-  radius: { type: Number, min: 1 },
+  centerLatitude: { type: Number, required: true, min: -90, max: 90 },
+  centerLongitude: { type: Number, required: true, min: -180, max: 180 },
+  radius: { type: Number, required: true, min: 1, max: 100000 },
   riskLevel: enumField(['Low', 'Medium', 'High', 'Critical'], 'High'),
 });
 export const Alert = model(
