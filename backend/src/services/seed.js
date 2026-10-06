@@ -122,6 +122,7 @@ export async function seedDemo() {
       parkName: 'Yala National Park',
       rangerId: ranger._id,
       scheduledDate: new Date(),
+      scheduledEndTime: new Date(Date.now() + 4 * 60 * 60 * 1000),
       checkpoints,
       createdBy: manager._id,
     });
@@ -131,6 +132,7 @@ export async function seedDemo() {
       parkName: 'Yala National Park',
       rangerId: ranger._id,
       scheduledDate: new Date(Date.now() - 86400000),
+      scheduledEndTime: new Date(Date.now() - 86400000 + 4 * 60 * 60 * 1000),
       checkpoints,
       createdBy: manager._id,
       status: 'Completed',

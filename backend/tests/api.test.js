@@ -24,13 +24,19 @@ const files = [];
 const auth = (method, url, role = 'RANGER') =>
   request(app)[method](url).set('Authorization', `Bearer ${tokens[role]}`);
 const point = { latitude: 6.45, longitude: 81.4 };
-const validPatrol = () => ({
-  routeName: 'Test boundary route',
-  parkName: 'Yala',
-  rangerId: String(users.ranger._id),
-  scheduledDate: new Date(Date.now() + Math.random() * 1e9).toISOString(),
-  checkpoints: [{ name: 'East gate', ...point }],
-});
+let patrolScheduleIndex = 0;
+const validPatrol = () => {
+  const scheduled =
+    Date.UTC(2035, 0, 1) + patrolScheduleIndex++ * 2 * 60 * 60 * 1000;
+  return {
+    routeName: 'Test boundary route',
+    parkName: 'Yala',
+    rangerId: String(users.ranger._id),
+    scheduledDate: new Date(scheduled).toISOString(),
+    scheduledEndTime: new Date(scheduled + 60 * 60 * 1000).toISOString(),
+    checkpoints: [{ name: 'East gate', ...point }],
+  };
+};
 const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=',
   'base64',
@@ -306,6 +312,48 @@ describe('Patrol lifecycle', () => {
         })
       ).status,
     ).toBe(409);
+  });
+  test('rejects overlapping assigned and active schedules but allows adjacent times and other rangers', async () => {
+    const make = (start, end, rangerId = String(outsider._id)) => ({
+      ...validPatrol(),
+      rangerId,
+      scheduledDate: `2040-01-01T${start}:00.000Z`,
+      scheduledEndTime: `2040-01-01T${end}:00.000Z`,
+    });
+    const assign = (body) => auth('post', '/api/patrols', 'MANAGER').send(body);
+    const existing = await assign(make('08:00', '12:00'));
+    expect(existing.status).toBe(201);
+    for (const [start, end] of [
+      ['10:00', '14:00'],
+      ['09:00', '11:00'],
+      ['07:00', '13:00'],
+      ['08:00', '12:00'],
+    ])
+      expect((await assign(make(start, end))).status).toBe(409);
+    expect((await assign(make('12:00', '14:00'))).status).toBe(201);
+    expect((await assign(make('06:00', '08:00'))).status).toBe(201);
+    expect(
+      (await assign(make('10:00', '14:00', String(users.ranger._id)))).status,
+    ).toBe(201);
+    await Patrol.findByIdAndUpdate(existing.body.data._id, {
+      status: 'Active',
+    });
+    expect((await assign(make('10:00', '14:00'))).status).toBe(409);
+    await Patrol.findByIdAndUpdate(existing.body.data._id, {
+      status: 'Completed',
+    });
+    expect((await assign(make('08:00', '12:00'))).status).toBe(201);
+    expect((await assign(make('15:00', '15:00'))).status).toBe(400);
+    expect((await assign(make('16:00', '15:00'))).status).toBe(400);
+    const missing = make('15:00', '16:00');
+    delete missing.scheduledEndTime;
+    expect((await assign(missing)).status).toBe(400);
+    await Patrol.deleteMany({
+      scheduledDate: {
+        $gte: new Date('2040-01-01'),
+        $lt: new Date('2040-01-02'),
+      },
+    });
   });
   test('validates assignment, prevents conflicts and protects ownership', async () => {
     expect(

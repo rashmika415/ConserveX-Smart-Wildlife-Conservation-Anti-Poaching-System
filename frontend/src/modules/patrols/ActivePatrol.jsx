@@ -82,6 +82,8 @@ export default function ActivePatrol() {
                   <dd>{patrol.rangerId?.name}</dd>
                   <dt>Scheduled</dt>
                   <dd>{formatDate(patrol.scheduledDate)}</dd>
+                  <dt>Scheduled end</dt>
+                  <dd>{formatDate(patrol.scheduledEndTime)}</dd>
                   <dt>Started</dt>
                   <dd>{formatDate(patrol.startTime)}</dd>
                   <dt>Ended</dt>
