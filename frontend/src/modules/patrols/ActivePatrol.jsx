@@ -31,8 +31,10 @@ export default function ActivePatrol() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
+  const [endOptionsOpen, setEndOptionsOpen] = useState(false);
   const [endStatus, setEndStatus] = useState('Completed');
   const [reason, setReason] = useState('');
+  const [reasonDetails, setReasonDetails] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [formKey, setFormKey] = useState(0);
   async function action(path, body, method = 'patch') {
@@ -95,7 +97,12 @@ export default function ActivePatrol() {
                   {patrol.incompleteReason && (
                     <>
                       <dt>Ended early</dt>
-                      <dd>{patrol.incompleteReason}</dd>
+                      <dd>
+                        {patrol.incompleteReason === 'Other' &&
+                        patrol.incompleteReasonDetails
+                          ? `Other: ${patrol.incompleteReasonDetails}`
+                          : patrol.incompleteReason}
+                      </dd>
                     </>
                   )}
                 </dl>
@@ -176,6 +183,11 @@ export default function ActivePatrol() {
                   className="panel form-panel align-start"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    if (reason === 'Other' && !reasonDetails.trim()) {
+                      setError('Please describe the reason for ending early.');
+                      return;
+                    }
+                    setError('');
                     setConfirm(true);
                   }}
                 >
@@ -183,31 +195,75 @@ export default function ActivePatrol() {
                   <p className="muted">
                     Ending a patrol saves its duration and final summary.
                   </p>
-                  <FormInput
-                    label="Outcome"
-                    value={endStatus}
-                    onChange={(e) => setEndStatus(e.target.value)}
-                    options={['Completed', 'Incomplete']}
-                  />
-                  {endStatus === 'Incomplete' && (
-                    <FormInput
-                      label="Reason for ending early"
-                      required
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      options={[
-                        '',
-                        'Weather',
-                        'Injury',
-                        'Hazard',
-                        'Called Back',
-                        'Other',
-                      ]}
-                    />
-                  )}
-                  <button className="button" disabled={busy}>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={busy}
+                    aria-expanded={endOptionsOpen}
+                    aria-controls="patrol-end-options"
+                    onClick={() => {
+                      setEndOptionsOpen((open) => !open);
+                      setEndStatus('Completed');
+                      setReason('');
+                    }}
+                  >
                     End Patrol
                   </button>
+                  {endOptionsOpen && (
+                    <div id="patrol-end-options" className="button-row">
+                      <button
+                        type="button"
+                        className="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setEndStatus('Completed');
+                          setReason('');
+                          setConfirm(true);
+                        }}
+                      >
+                        Complete Patrol
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        disabled={busy}
+                        onClick={() => setEndStatus('Incomplete')}
+                      >
+                        Terminate Early
+                      </button>
+                    </div>
+                  )}
+                  {endOptionsOpen && endStatus === 'Incomplete' && (
+                    <>
+                      <FormInput
+                        label="Reason for ending early"
+                        required
+                        value={reason}
+                        onChange={(e) => setReason(e.target.value)}
+                        options={[
+                          '',
+                          'Weather',
+                          'Injury',
+                          'Hazard',
+                          'Called Back',
+                          'Other',
+                        ]}
+                      />
+                      {reason === 'Other' && (
+                        <FormInput
+                          label="Describe the reason for ending early"
+                          multiline
+                          required
+                          maxLength={2000}
+                          value={reasonDetails}
+                          onChange={(e) => setReasonDetails(e.target.value)}
+                        />
+                      )}
+                      <button className="button" disabled={busy}>
+                        Confirm early termination
+                      </button>
+                    </>
+                  )}
                 </form>
               </div>
             )}
@@ -245,7 +301,13 @@ export default function ActivePatrol() {
           busy={busy}
           onCancel={() => setConfirm(false)}
           onConfirm={() =>
-            action('end', { status: endStatus, incompleteReason: reason })
+            action('end', {
+              status: endStatus,
+              incompleteReason: reason,
+              ...(endStatus === 'Incomplete' && reason === 'Other'
+                ? { incompleteReasonDetails: reasonDetails.trim() }
+                : {}),
+            })
           }
         />
       )}

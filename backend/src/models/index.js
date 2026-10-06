@@ -87,6 +87,7 @@ export const Patrol = model(
       'Assigned',
     ),
     incompleteReason: { type: String, enum: incompleteReasons },
+    incompleteReasonDetails: { type: String, maxlength: 2000 },
     createdBy: ref('User'),
   },
   [
