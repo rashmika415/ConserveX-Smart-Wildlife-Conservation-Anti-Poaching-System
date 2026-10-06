@@ -283,10 +283,17 @@ export default function ActivePatrol() {
                         }}
                         options={[
                           '',
-                          'Weather',
-                          'Injury',
-                          'Hazard',
-                          'Called Back',
+                          'Medical Emergency',
+                          'Vehicle Breakdown',
+                          'Severe Weather',
+                          'Unsafe Conditions',
+                          'Blocked or Inaccessible Route',
+                          'Wildlife Threat',
+                          'Equipment Failure',
+                          'Communication Failure',
+                          'Emergency Reassignment',
+                          'Security Threat',
+                          'Insufficient Resources',
                           'Other',
                         ]}
                       />

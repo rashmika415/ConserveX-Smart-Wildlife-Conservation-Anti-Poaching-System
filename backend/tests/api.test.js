@@ -364,9 +364,9 @@ describe('Patrol lifecycle', () => {
     ).toBe(400);
     const end = await auth('patch', `/api/patrols/${one}/end`).send({
       status: 'Incomplete',
-      incompleteReason: 'Weather',
+      incompleteReason: 'Severe Weather',
     });
-    expect(end.body.data.incompleteReason).toBe('Weather');
+    expect(end.body.data.incompleteReason).toBe('Severe Weather');
   });
 });
 describe('Collar monitoring and alerts', () => {
