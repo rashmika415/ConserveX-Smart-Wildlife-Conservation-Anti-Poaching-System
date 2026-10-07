@@ -549,6 +549,7 @@ small {
   background: #fbf0d6;
 }
 .badge-critical,
+.badge-escalated,
 .badge-incomplete,
 .badge-false-report {
   color: #a84034;

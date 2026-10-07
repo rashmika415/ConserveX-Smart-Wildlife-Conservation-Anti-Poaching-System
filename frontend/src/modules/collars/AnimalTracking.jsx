@@ -64,10 +64,15 @@ export default function AnimalTracking() {
     setBusy(true);
     const zone = zones.data?.find((zone) => zone._id === zoneId);
     try {
+      if (zoneId !== 'safe' && !zone) {
+        setError('Select an available risk zone and try again.');
+        return;
+      }
       const { data } = await api.post('/collar-readings', {
         collarId: selected,
-        latitude: zone ? zone.centerLatitude : 0,
-        longitude: zone ? zone.centerLongitude : 0,
+        ...(zoneId === 'safe'
+          ? { simulation: 'safe' }
+          : { latitude: zone.centerLatitude, longitude: zone.centerLongitude }),
       });
       setResult(data.data);
       setHistory(null);
@@ -181,7 +186,10 @@ export default function AnimalTracking() {
               value={zoneId}
               onChange={(e) => setZoneId(e.target.value)}
               options={[
-                { value: 'safe', label: 'Safe test location (0, 0)' },
+                {
+                  value: 'safe',
+                  label: 'Safe test location (outside risk zones)',
+                },
                 ...(zones.data || []).map((zone) => ({
                   value: zone._id,
                   label: `${zone.zoneName} · ${zone.riskLevel}`,

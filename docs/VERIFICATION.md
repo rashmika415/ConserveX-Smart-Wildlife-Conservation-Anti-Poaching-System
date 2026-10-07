@@ -2,6 +2,13 @@
 
 Verified on 6 October 2026 with Node.js 22.17.0 on Windows.
 
+## Member 2 unit coverage update — 7 October 2026
+
+- The frontend suite passes 25 tests. `frontend/src/modules/collars/` has **94.73% statements, 87.03% branches, 88.88% functions, and 96.59% lines**. Tests cover safe and risk simulations, invalid collars, reading history, zone creation feedback, alert filtering, acknowledgement, resolution, response errors, and resolved alert history.
+- The most recent backend coverage run passes 23 tests. `backend/src/services/tracking.js` has **90.9% statements, 80% branches, 100% functions, and 93.33% lines**; backend tracking controllers have 100% across all four measures.
+- Whole-frontend coverage is **45.83% statements, 51.36% branches, 37.07% functions, and 47.59% lines**. The 80% target is met for the Member 2 module, not the entire frontend application.
+- The browser workflow suite has not been rerun since the zone exit and re-entry change.
+
 ## Automated evidence
 
 - **Backend:** 19 Jest/Supertest tests passed against MongoDB 7.0.24 in an isolated temporary database. No application database was contacted.

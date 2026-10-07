@@ -43,7 +43,13 @@ function RecentPanel({ title, items, path, label, subtitle, icon: Icon }) {
                 <strong>{label(item)}</strong>
                 <small>{subtitle(item)}</small>
               </div>
-              <StatusBadge status={item.status} />
+              <StatusBadge
+                status={
+                  item.escalatedAt && item.status === 'New'
+                    ? 'Escalated'
+                    : item.status
+                }
+              />
             </Link>
           ))}
         </div>
