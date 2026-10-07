@@ -71,8 +71,15 @@ export async function startPatrol(id, user) {
   return result;
 }
 export async function addWaypoint(id, user, body, imageUrl) {
-  await rangerPatrol(id, user);
+  const patrol = await rangerPatrol(id, user);
+  const clientId = text(body.clientId, 'Waypoint ID', false, 100);
+  if (clientId && patrol.waypoints.some((point) => point.clientId === clientId))
+    return patrol;
   const waypoint = {
+    ...(clientId ? { clientId } : {}),
+    ...(body.recordedAt
+      ? { recordedAt: date(body.recordedAt, 'Recorded time') }
+      : {}),
     location: location(body),
     type: choice(
       body.type,
@@ -83,10 +90,19 @@ export async function addWaypoint(id, user, body, imageUrl) {
     imageUrl,
   };
   const result = await Patrol.findOneAndUpdate(
-    { _id: id, status: 'Active' },
+    {
+      _id: id,
+      status: 'Active',
+      ...(clientId ? { 'waypoints.clientId': { $ne: clientId } } : {}),
+    },
     { $push: { waypoints: waypoint } },
     { new: true, runValidators: true },
   );
+  if (!result && clientId) {
+    const existing = await rangerPatrol(id, user);
+    if (existing.waypoints.some((point) => point.clientId === clientId))
+      return existing;
+  }
   if (!result)
     throw new ApiError(
       409,

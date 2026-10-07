@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useResource } from '../../hooks/useResource';
-import { api, multipart, errorMessage } from '../../services/api';
+import { useOfflinePatrol } from '../../hooks/useOfflinePatrol';
+import {
+  saveWaypoint,
+  syncWaypoints,
+  listWaypoints,
+} from '../../services/offlineWaypoints';
+import { api, errorMessage } from '../../services/api';
 import {
   PageHeader,
   ResourceState,
@@ -19,7 +24,7 @@ import {
 export default function ActivePatrol() {
   const { id } = useParams();
   const { user } = useAuth();
-  const resource = useResource(`/patrols/${id}`);
+  const resource = useOfflinePatrol(id, user._id);
   const initial = {
     latitude: '',
     longitude: '',
@@ -41,6 +46,17 @@ export default function ActivePatrol() {
     setBusy(true);
     setError('');
     try {
+      if (path === 'end') {
+        await syncWaypoints(user._id);
+        if (
+          (await listWaypoints(user._id, id)).some(
+            (point) => point.syncStatus === 'PENDING',
+          )
+        )
+          throw new Error(
+            'Sync all pending waypoints before ending this patrol.',
+          );
+      }
       const { data } = await api[method](`/patrols/${id}/${path}`, body);
       setSuccess(data.message);
       resource.reload();
@@ -50,13 +66,52 @@ export default function ActivePatrol() {
         setFormKey((k) => k + 1);
       }
     } catch (error) {
-      setError(errorMessage(error));
+      setError(error.message || errorMessage(error));
       setConfirm(false);
     } finally {
       setBusy(false);
     }
   }
+  async function recordWaypoint() {
+    setBusy(true);
+    setError('');
+    try {
+      await saveWaypoint(user._id, id, values);
+      setValues(initial);
+      setFormKey((key) => key + 1);
+      setSuccess(
+        'Waypoint saved locally. Pending waypoints upload automatically when connected.',
+      );
+      await syncWaypoints(user._id);
+    } catch (error) {
+      setError(
+        error.message ||
+          'Could not save locally. Keep this form open and try again.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   const patrol = resource.data;
+  const pending = resource.points.filter(
+    (point) => point.syncStatus === 'PENDING',
+  );
+  const waypoints = [
+    ...(patrol?.waypoints || []),
+    ...resource.points
+      .filter(
+        (point) =>
+          point.syncStatus === 'PENDING' ||
+          !(patrol?.waypoints || []).some(
+            (saved) => saved.clientId === point.clientId,
+          ),
+      )
+      .map((point) => ({
+        ...point,
+        _id: point.clientId,
+        location: { latitude: point.latitude, longitude: point.longitude },
+      })),
+  ];
   return (
     <>
       <PageHeader
@@ -162,7 +217,7 @@ export default function ActivePatrol() {
                   key={formKey}
                   onSubmit={(event) => {
                     event.preventDefault();
-                    action('waypoints', multipart(values), 'post');
+                    recordWaypoint();
                   }}
                 >
                   <h2>Record waypoint</h2>
@@ -331,22 +386,46 @@ export default function ActivePatrol() {
               </div>
             )}
             <section className="panel section-gap">
+              <p role="status">
+                {pending.length
+                  ? `${pending.length} waypoint(s) PENDING sync`
+                  : 'All waypoints SYNCED'}
+              </p>
+              {pending.length > 0 && (
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    syncWaypoints(user._id).catch((error) =>
+                      setError(error.message),
+                    )
+                  }
+                >
+                  Retry sync
+                </button>
+              )}
               <h2>
                 {patrol.endTime
                   ? 'Patrol summary · recorded waypoints'
                   : 'Waypoint activity'}
               </h2>
-              {patrol.waypoints.length === 0 ? (
+              {waypoints.length === 0 ? (
                 <p className="muted">No waypoints recorded yet.</p>
               ) : (
                 <div className="card-grid">
-                  {patrol.waypoints.map((point) => (
+                  {waypoints.map((point) => (
                     <article className="waypoint" key={point._id}>
                       <div className="section-heading">
-                        <strong>{point.type}</strong>
+                        <strong>
+                          {point.type}{' '}
+                          <span className="badge">
+                            {point.syncStatus || 'SYNCED'}
+                          </span>
+                        </strong>
                         <small>{formatDate(point.recordedAt)}</small>
                       </div>
                       <p>{point.description || 'No note added.'}</p>
+                      {point.syncError && <p role="alert">{point.syncError}</p>}
                       <LocationMap location={point.location} />
                       <Photo path={point.imageUrl} />
                     </article>

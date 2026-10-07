@@ -740,3 +740,51 @@ describe('Public community reporting and officer response', () => {
     expect(saved.location.latitude).toBe(6.4);
   });
 });
+
+test('offline waypoint retries are atomic and preserve capture time', async () => {
+  const patrol = await Patrol.create({
+    ...validPatrol(),
+    rangerId: outsider._id,
+    createdBy: users.manager._id,
+    status: 'Active',
+    startTime: new Date(),
+  });
+  const captured = '2026-10-07T02:00:00.000Z';
+  const body = {
+    ...point,
+    type: 'Checkpoint',
+    clientId: 'offline-retry-test',
+    recordedAt: captured,
+  };
+  try {
+    const responses = await Promise.all([
+      auth('post', `/api/patrols/${patrol._id}/waypoints`, 'OTHER').send(body),
+      auth('post', `/api/patrols/${patrol._id}/waypoints`, 'OTHER').send(body),
+    ]);
+    expect(responses.map((response) => response.status)).toEqual([200, 200]);
+    const saved = await Patrol.findById(patrol._id);
+    expect(saved.waypoints).toHaveLength(1);
+    expect(saved.waypoints[0].recordedAt.toISOString()).toBe(captured);
+    await Patrol.updateOne({ _id: patrol._id }, { status: 'Completed' });
+    expect(
+      (
+        await auth(
+          'post',
+          `/api/patrols/${patrol._id}/waypoints`,
+          'OTHER',
+        ).send(body)
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await auth(
+          'post',
+          `/api/patrols/${patrol._id}/waypoints`,
+          'OTHER',
+        ).send({ ...body, clientId: 'new-point' })
+      ).status,
+    ).toBe(409);
+  } finally {
+    await Patrol.deleteOne({ _id: patrol._id });
+  }
+});
