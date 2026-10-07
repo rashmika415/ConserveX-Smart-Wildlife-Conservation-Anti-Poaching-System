@@ -13,6 +13,8 @@ A mobile-friendly university assignment application connecting park managers, ra
 
 Role-specific dashboards combine saved records, open counts and recent activity. The interface includes mobile navigation, status badges, loading/empty states, filters, confirmation dialogs and schematic coordinate cards. No paid API or hardware is required.
 
+Staff headers include an alert notification bell. Its badge counts alerts awaiting acknowledgement (not per-user unread messages). The dropdown shows up to five open alerts, prioritizes escalated alerts, and links to alert details or the full list. It refreshes every 30 seconds, when opened, on page navigation, and when the window regains focus. Opening a notification does not acknowledge it; use the existing Ranger/CLO acknowledgement action. Resolved alerts disappear from the dropdown after refresh.
+
 ## Technology and architecture
 
 - **Frontend:** JavaScript, React, Vite, React Router, Axios, Lucide icons, responsive CSS.

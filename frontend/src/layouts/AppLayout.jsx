@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { roleLabel } from '../components/UI';
+import AlertNotifications from '../components/AlertNotifications';
 const base = [['/app', 'Dashboard', LayoutDashboard]];
 const links = {
   MANAGER: [
@@ -115,19 +116,22 @@ export function AppLayout() {
               Yala National Park <span className="dot" /> Operations centre
             </span>
           </div>
-          <Link className="user-chip" to="/app/profile">
-            <span className="avatar">
-              {user.name
-                .split(' ')
-                .map((part) => part[0])
-                .slice(0, 2)
-                .join('')}
-            </span>
-            <span>
-              {user.name}
-              <small>{roleLabel[user.role]}</small>
-            </span>
-          </Link>
+          <div className="topbar-actions">
+            <AlertNotifications key={user._id || user.email} />
+            <Link className="user-chip" to="/app/profile">
+              <span className="avatar">
+                {user.name
+                  .split(' ')
+                  .map((part) => part[0])
+                  .slice(0, 2)
+                  .join('')}
+              </span>
+              <span>
+                {user.name}
+                <small>{roleLabel[user.role]}</small>
+              </span>
+            </Link>
+          </div>
         </header>
         <main className="main-content">
           <Outlet />
