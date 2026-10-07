@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useResource } from '../../hooks/useResource';
 import { api, errorMessage } from '../../services/api';
+import { useIncidentOutbox } from '../../hooks/useIncidentOutbox';
 import {
   PageHeader,
   ResourceState,
@@ -17,11 +18,21 @@ import {
 export default function IncidentManagement() {
   const resource = useResource('/incidents');
   const { user } = useAuth();
+  const outbox = useIncidentOutbox(user.role === 'RANGER' ? user._id : null);
   const [filter, setFilter] = useState('All');
-  const records =
-    resource.data?.filter(
-      (item) => filter === 'All' || item.status === filter,
-    ) || [];
+  const localRecords = outbox.records.map((item) => ({
+    ...item,
+    _id: item.localId,
+    localOnly: true,
+    rangerId: { name: user.name },
+    status: 'Reported',
+  }));
+  const records = [...localRecords, ...(resource.data || [])]
+    .filter((item) => filter === 'All' || item.status === filter)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const visibleResource = records.length
+    ? { ...resource, loading: false, error: '' }
+    : resource;
   return (
     <>
       <PageHeader
@@ -46,14 +57,40 @@ export default function IncidentManagement() {
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
-        <ResourceState resource={resource}>
+        {user.role === 'RANGER' && outbox.records.length > 0 && (
+          <div className="notice sync-notice">
+            <span>
+              {outbox.records.length} report
+              {outbox.records.length === 1 ? '' : 's'} saved on this device and
+              not yet confirmed by the server.
+            </span>
+            <button
+              className="button secondary"
+              disabled={outbox.syncing || !navigator.onLine}
+              onClick={outbox.sync}
+            >
+              {outbox.syncing ? 'Synchronizing…' : 'Retry sync'}
+            </button>
+          </div>
+        )}
+        <Feedback error={outbox.storageError} />
+        <ResourceState resource={visibleResource}>
           {records.length ? (
             <div className="record-list">
               {records.map((item) => (
                 <Link
                   className="record"
                   key={item._id}
-                  to={`/app/incidents/${item._id}`}
+                  to={
+                    item.localOnly
+                      ? '/app/incidents'
+                      : `/app/incidents/${item._id}`
+                  }
+                  aria-label={
+                    item.localOnly
+                      ? `${item.incidentType}, saved locally`
+                      : undefined
+                  }
                 >
                   <div className="record-icon">!</div>
                   <div className="record-main">
@@ -65,7 +102,7 @@ export default function IncidentManagement() {
                   </div>
                   <div className="record-badges">
                     <StatusBadge status={item.status} />
-                    <StatusBadge status={item.syncStatus} />
+                    <StatusBadge status={item.syncState || 'SYNCED'} />
                   </div>
                 </Link>
               ))}

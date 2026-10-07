@@ -4,17 +4,28 @@ import { ApiError, requireRecord, success } from '../utils/apiError.js';
 import { ownRecord } from '../middleware/auth.js';
 export async function create(req, res) {
   const body = req.body;
+  const clientReportId = text(
+    body.clientReportId,
+    'Client report ID',
+    false,
+    100,
+  );
+  if (clientReportId) {
+    const existing = await Incident.findOne({
+      rangerId: req.user._id,
+      clientReportId,
+    });
+    if (existing)
+      return success(res, existing, 'Incident already synchronized');
+  }
   const data = {
     incidentType: choice(body.incidentType, incidentTypes, 'incident type'),
     location: location(body),
     description: text(body.description, 'Description', false),
     imageUrl: req.imageUrl,
     rangerId: req.user._id,
-    syncStatus: choice(
-      body.syncStatus || 'Synced',
-      ['Synced', 'Pending'],
-      'sync status',
-    ),
+    syncStatus: 'Synced',
+    ...(clientReportId ? { clientReportId } : {}),
   };
   if (body.patrolId) {
     const patrol = ownRecord(

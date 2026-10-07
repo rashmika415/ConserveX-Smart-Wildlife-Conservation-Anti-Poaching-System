@@ -156,7 +156,7 @@ describe('Authentication and foundation', () => {
   });
 });
 describe('Incident management', () => {
-  test('creates a pending simulation report, manager reviews it, ranger sees own history', async () => {
+  test('creates a synchronized report, manager reviews it, ranger sees own history', async () => {
     const response = await auth('post', '/api/incidents').send({
       incidentType: 'Snare / Trap',
       ...point,
@@ -167,7 +167,7 @@ describe('Incident management', () => {
     expect(response.status).toBe(201);
     const incident = response.body.data;
     expect(incident.rangerId).toBe(String(users.ranger._id));
-    expect(incident.syncStatus).toBe('Pending');
+    expect(incident.syncStatus).toBe('Synced');
     const list = await auth('get', `/api/incidents/ranger/${users.ranger._id}`);
     expect(list.body.data.some((item) => item._id === incident._id)).toBe(true);
     expect(

@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, multipart, errorMessage } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { saveOfflineIncident } from '../../services/incidentOutbox';
+import { useIncidentOutbox } from '../../hooks/useIncidentOutbox';
 import {
   PageHeader,
   FormInput,
@@ -9,6 +12,7 @@ import {
   Feedback,
   StatusBadge,
 } from '../../components/UI';
+
 export const incidentTypes = [
   'Snare / Trap',
   'Animal Carcass',
@@ -17,7 +21,10 @@ export const incidentTypes = [
   'Injured Animal',
   'Other',
 ];
+
 export default function ReportIncident() {
+  const { user } = useAuth();
+  useIncidentOutbox(user?._id);
   const [params] = useSearchParams();
   const [values, setValues] = useState({
     incidentType: '',
@@ -27,10 +34,25 @@ export default function ReportIncident() {
     photo: null,
     patrolId: params.get('patrol') || '',
   });
-  const [offline, setOffline] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(null);
+
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
+
+  async function saveLocally() {
+    setSaved(await saveOfflineIncident(values, user?._id));
+  }
+
   async function submit(event) {
     event.preventDefault();
     setError('');
@@ -43,18 +65,34 @@ export default function ReportIncident() {
       return;
     }
     setBusy(true);
+    if (!online) {
+      try {
+        await saveLocally();
+      } catch {
+        setError(
+          'This device could not save the report offline. Free some storage and try again.',
+        );
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     try {
-      const { data } = await api.post(
-        '/incidents',
-        multipart({ ...values, syncStatus: offline ? 'Pending' : 'Synced' }),
-      );
-      setSaved(data.data);
-    } catch (error) {
-      setError(errorMessage(error));
+      const { data } = await api.post('/incidents', multipart(values));
+      setSaved({ ...data.data, syncState: 'SYNCED' });
+    } catch (requestError) {
+      if (!requestError.response) {
+        try {
+          await saveLocally();
+        } catch {
+          setError(errorMessage(requestError));
+        }
+      } else setError(errorMessage(requestError));
     } finally {
       setBusy(false);
     }
   }
+
   return (
     <>
       <PageHeader
@@ -64,25 +102,39 @@ export default function ReportIncident() {
       />
       {saved ? (
         <section className="panel confirmation">
-          <h2>Incident reported successfully</h2>
-          <p>Your report has been saved and is visible to the park manager.</p>
-          <StatusBadge status={saved.syncStatus} />
-          <p className="reference">Reference: {saved._id}</p>
-          {saved.syncStatus === 'Pending' && (
+          <h2>
+            {saved.syncState === 'SYNCED'
+              ? 'Incident synchronized successfully'
+              : 'Incident saved on this device'}
+          </h2>
+          <StatusBadge status={saved.syncState} />
+          <p className="reference">Reference: {saved._id || saved.localId}</p>
+          {saved.syncState !== 'SYNCED' && (
             <p className="muted">
-              Pending Sync is a demonstration label. This report is already
-              saved in the database.
+              This report is saved locally, but the park manager cannot see it
+              yet. It will retry automatically when connectivity returns.
             </p>
           )}
           <Link className="button" to="/app/incidents">
-            View incident history
+            View my incident history
           </Link>
         </section>
       ) : (
         <div className="detail-grid">
           <form className="panel form-panel" onSubmit={submit}>
             <Feedback error={error} />
-            <h2>Incident details</h2>
+            <div className="section-heading">
+              <h2>Incident details</h2>
+              <StatusBadge status="DRAFT" />
+            </div>
+            <div
+              className={`connectivity ${online ? 'online' : 'offline'}`}
+              role="status"
+            >
+              {online
+                ? 'Online — reports will synchronize immediately.'
+                : 'Offline — reports will be saved only on this device.'}
+            </div>
             <FormInput
               label="Incident type"
               options={['', ...incidentTypes]}
@@ -106,28 +158,19 @@ export default function ReportIncident() {
             <PhotoUpload
               onChange={(photo) => setValues((p) => ({ ...p, photo }))}
             />
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={offline}
-                onChange={(e) => setOffline(e.target.checked)}
-              />{' '}
-              Simulate Offline
-            </label>
-            <p className="muted">
-              Simulation only: saves to the server with a{' '}
-              {offline ? 'Pending Sync' : 'Synced'} label. A network connection
-              is required.
-            </p>
             <button className="button" disabled={busy}>
-              {busy ? 'Saving report…' : 'Submit incident report'}
+              {busy
+                ? 'Saving report…'
+                : online
+                  ? 'Submit and synchronize report'
+                  : 'Save report on this device'}
             </button>
           </form>
           <aside className="panel guidance">
             <h3>A useful field report</h3>
             <p>
               Confirm the location, choose the closest incident type, and add
-              any observations that could help the response team.
+              observations that could help the response team.
             </p>
             <p>
               Photographs are optional. Accepted formats: JPEG, PNG and WebP, up

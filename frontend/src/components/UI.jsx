@@ -40,15 +40,22 @@ export function PageHeader({
   );
 }
 export function StatusBadge({ status }) {
+  const labels = {
+    DRAFT: 'Draft',
+    SAVED_OFFLINE: 'Saved locally',
+    PENDING_SYNC: 'Pending sync',
+    SYNCED: 'Synced',
+  };
   return (
     <span
       className={`badge badge-${String(status).toLowerCase().replaceAll(' ', '-')}`}
     >
-      {status === 'Pending'
-        ? 'Pending Sync'
-        : status === 'Incomplete'
-          ? 'Terminated'
-          : status}
+      {labels[status] ||
+        (status === 'Pending'
+          ? 'Pending Sync'
+          : status === 'Incomplete'
+            ? 'Terminated'
+            : status)}
     </span>
   );
 }
@@ -212,7 +219,11 @@ export function LocationInput({
         (position) => {
           const lat = position.coords.latitude.toFixed(6);
           const lng = position.coords.longitude.toFixed(6);
-          updateCoords(lat, lng, '✓ Current coordinates captured from your device.');
+          updateCoords(
+            lat,
+            lng,
+            '✓ Current coordinates captured from your device.',
+          );
           setBusy(false);
         },
         (geoError) => {
@@ -331,7 +342,9 @@ export function LocationInput({
             <span className="place-title">
               <MapPin size={15} />
               <strong>
-                {detectedPlace.areaTitle || detectedPlace.town || 'Detected Area'}
+                {detectedPlace.areaTitle ||
+                  detectedPlace.town ||
+                  'Detected Area'}
               </strong>
             </span>
             {detectedPlace.province && (
@@ -361,7 +374,11 @@ export function LocationInput({
         <span className="preset-label">Quick wildlife sighting presets:</span>
         <div className="preset-buttons">
           {[
-            { label: 'Palatupana Water Tank', lat: '6.372500', lng: '81.520400' },
+            {
+              label: 'Palatupana Water Tank',
+              lat: '6.372500',
+              lng: '81.520400',
+            },
             { label: 'Yala Menik River', lat: '6.450000', lng: '81.400000' },
             { label: 'Udawalawe Border', lat: '6.474600', lng: '80.884500' },
             { label: 'Minneriya Corridor', lat: '8.032400', lng: '80.825600' },
@@ -428,7 +445,8 @@ export function LocationInput({
             className="muted"
             style={{ display: 'block', marginTop: '6px' }}
           >
-            Tip: You can click anywhere on the map to set or move the GPS coordinates pin.
+            Tip: You can click anywhere on the map to set or move the GPS
+            coordinates pin.
           </small>
         </div>
       )}
@@ -449,7 +467,7 @@ export function LocationMap({
     );
 
   const lat = location ? Number(location.latitude) : 6.45;
-  const lng = location ? Number(location.longitude) : 81.40;
+  const lng = location ? Number(location.longitude) : 81.4;
   let leftPercent = 50;
   let topPercent = 38;
   if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
@@ -503,7 +521,8 @@ export function LocationMap({
               {zone
                 ? `${zone.zoneName} · radius ${zone.radius} m`
                 : 'Location reference'}{' '}
-              · schematic{interactive ? ' (click to reposition)' : ', not to scale'}
+              · schematic
+              {interactive ? ' (click to reposition)' : ', not to scale'}
             </span>
           </>
         ) : (

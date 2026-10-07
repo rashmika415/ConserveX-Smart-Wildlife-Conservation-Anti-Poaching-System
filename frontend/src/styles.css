@@ -827,6 +827,30 @@ small {
   font-size: 0.8rem;
   margin-bottom: 22px;
 }
+.connectivity {
+  padding: 10px 12px;
+  border-radius: 7px;
+  margin-bottom: 18px;
+  font-size: 0.8rem;
+  border: 1px solid #bed7bd;
+  background: #edf7ea;
+  color: #3d6e37;
+}
+.connectivity.offline {
+  border-color: #e1d5b6;
+  background: #fbf7e8;
+  color: #7c632d;
+}
+.sync-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.button.compact {
+  padding: 6px 10px;
+  font-size: 0.72rem;
+}
 .guidance {
   align-self: start;
   background: #eef2e8;

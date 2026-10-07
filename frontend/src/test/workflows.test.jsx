@@ -62,7 +62,7 @@ describe('Incident form', () => {
     mount(<ReportIncident />);
     fireEvent.submit(
       screen
-        .getByRole('button', { name: 'Submit incident report' })
+        .getByRole('button', { name: 'Submit and synchronize report' })
         .closest('form'),
     );
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -70,25 +70,22 @@ describe('Incident form', () => {
     );
     expect(api.post).not.toHaveBeenCalled();
   });
-  it('saves an offline simulation as Pending through the API and confirms it honestly', async () => {
+  it('synchronizes an online incident and confirms server receipt', async () => {
     api.post.mockResolvedValue({
-      data: { data: { _id: 'incident-1', syncStatus: 'Pending' } },
+      data: { data: { _id: 'incident-1', syncStatus: 'Synced' } },
     });
     mount(<ReportIncident />);
     change(/Incident type/, 'Snare / Trap');
     change(/Latitude/, '6.45');
     change(/Longitude/, '81.4');
-    fireEvent.click(screen.getByLabelText('Simulate Offline'));
     fireEvent.click(
-      screen.getByRole('button', { name: 'Submit incident report' }),
+      screen.getByRole('button', { name: 'Submit and synchronize report' }),
     );
     expect(
-      await screen.findByText('Incident reported successfully'),
+      await screen.findByText('Incident synchronized successfully'),
     ).toBeInTheDocument();
-    expect(api.post.mock.calls[0][1].get('syncStatus')).toBe('Pending');
-    expect(
-      screen.getByText(/already saved in the database/),
-    ).toBeInTheDocument();
+    expect(api.post.mock.calls[0][1].has('syncStatus')).toBe(false);
+    expect(screen.getByText('Synced')).toBeInTheDocument();
   });
 });
 describe('Public reporting', () => {
