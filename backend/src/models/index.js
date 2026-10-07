@@ -145,6 +145,7 @@ export const Alert = model(
     resolvedBy: ref('User', false),
     resolvedAt: Date,
     lastDetectedAt: Date,
+    escalatedAt: Date,
   },
   [
     [

@@ -24,5 +24,5 @@ The four substantial use cases remain in one integrated React / Express / MongoD
 - Sessions expire after eight hours. Tokens are stored in browser session storage and are cleared on logout. There is no central token revocation or refresh-token service.
 - The simulator uses artificial safe coordinates (0, 0), outside all seeded zones. They are test coordinates, not plausible Sri Lankan animal movement.
 - Dashboard alerts refresh every 30 seconds, rather than using push notifications.
-- Community duplicate detection and automatic escalation are intentionally not claimed.
+- Community duplicate detection is not implemented. Unacknowledged collar alerts are flagged in-app after a configurable deadline (15 minutes by default), checked every 30 seconds and on alert reads. Escalation retains an audit timestamp without changing the zone priority or acknowledgement/resolution lifecycle. This implements Member Two's overdue-response flow; it does not contact external services.
 - This is production-style assignment software, not a deployed emergency response service.

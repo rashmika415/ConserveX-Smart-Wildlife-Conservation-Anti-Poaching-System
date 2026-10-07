@@ -9,6 +9,7 @@ import path from 'node:path';
 import { app } from '../src/app.js';
 import { config, uploadsPath } from '../src/config.js';
 import { seedDemo } from '../src/services/seed.js';
+import { escalateOverdueAlerts } from '../src/services/alertEscalation.js';
 import {
   User,
   Incident,
@@ -370,6 +371,77 @@ describe('Patrol lifecycle', () => {
   });
 });
 describe('Collar monitoring and alerts', () => {
+  test('escalates at the deadline once, preserves history, and excludes handled alerts', async () => {
+    const now = new Date();
+    const deadline = new Date(
+      now.getTime() - config.alertEscalationMinutes * 60000,
+    );
+    const animalId = (await Collar.findOne({ collarId: 'GPS-C102' })).animalId;
+    const fixtures = await Alert.create(
+      [
+        { createdAt: deadline, status: 'New', open: true },
+        {
+          createdAt: new Date(deadline.getTime() + 1),
+          status: 'New',
+          open: true,
+        },
+        { createdAt: deadline, status: 'Acknowledged', open: true },
+        { createdAt: deadline, status: 'Resolved', open: false },
+      ].map((value) => ({
+        ...value,
+        animalId,
+        zoneId: new mongoose.Types.ObjectId(),
+        lastDetectedAt: now,
+      })),
+    );
+    const ids = fixtures.map((item) => item._id);
+    try {
+      await Promise.all([
+        escalateOverdueAlerts(now),
+        escalateOverdueAlerts(now),
+      ]);
+      const stored = await Promise.all(ids.map((id) => Alert.findById(id)));
+      expect(stored[0].escalatedAt).toEqual(now);
+      expect(stored[0].status).toBe('New');
+      expect(stored.slice(1).every((item) => !item.escalatedAt)).toBe(true);
+      await escalateOverdueAlerts(now);
+      expect((await Alert.findById(ids[0])).escalatedAt).toEqual(now);
+      expect(await Alert.countDocuments({ _id: { $in: ids } })).toBe(4);
+      const list = await auth('get', '/api/alerts', 'MANAGER');
+      expect(list.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            _id: String(ids[0]),
+            escalatedAt: now.toISOString(),
+          }),
+        ]),
+      );
+      const details = await auth('get', `/api/alerts/${ids[0]}`, 'LIAISON');
+      expect(details.body.data.escalatedAt).toBe(now.toISOString());
+      const ack = await auth(
+        'patch',
+        `/api/alerts/${ids[0]}/acknowledge`,
+        'LIAISON',
+      );
+      expect(ack.status).toBe(200);
+      expect(ack.body.data.status).toBe('Acknowledged');
+      await escalateOverdueAlerts(new Date(now.getTime() + 3600000));
+      expect((await Alert.findById(ids[0])).escalatedAt).toEqual(now);
+      const resolved = await auth(
+        'patch',
+        `/api/alerts/${ids[0]}/resolve`,
+        'MANAGER',
+      );
+      expect(resolved.body.data).toMatchObject({
+        status: 'Resolved',
+        escalatedAt: now.toISOString(),
+      });
+      expect((await Alert.findById(ids[2])).escalatedAt).toBeUndefined();
+      expect((await Alert.findById(ids[3])).escalatedAt).toBeUndefined();
+    } finally {
+      await Alert.deleteMany({ _id: { $in: ids } });
+    }
+  });
   test('alerts only for readings within a risk-zone radius', async () => {
     const zone = await RiskZone.create({
       zoneName: `Boundary test ${Date.now()}`,

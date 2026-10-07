@@ -144,6 +144,10 @@ On **Animal Tracking**, a manager can create a high-risk zone with a unique name
 
 Each reading records whether its collar is inside a high-risk zone. An open alert is updated by repeated inside readings. After an alert is resolved, a new alert requires a reading outside that zone followed by a reading inside it.
 
+Unacknowledged alerts are automatically flagged **Escalated** after 15 minutes from first detection. Set `ALERT_ESCALATION_MINUTES` in `backend/.env` to a positive number to change the threshold, then restart the API. The API checks at startup and every 30 seconds even without viewers; alert list/detail requests also check for overdue alerts. Repeated readings do not extend the deadline. Escalation records `escalatedAt` once, preserving the existing priority and New/Acknowledged/Resolved lifecycle. The flag appears in staff dashboards and alerts, with an Escalated filter for alerts still awaiting acknowledgement. Ranger/CLO acknowledgement clears the active warning; escalation history remains after acknowledgement or manager resolution. This is an in-app flag, not SMS/email delivery.
+
+To demonstrate escalation quickly, temporarily set `ALERT_ESCALATION_MINUTES=0.1` (six seconds), restart the API, simulate a fresh risk-zone entry, and leave it unacknowledged. Open Alerts after six seconds or wait for its 30-second refresh. Acknowledge as Ranger/CLO and verify the warning clears. Restore `15` and restart after the demo.
+
 ## Tests and build
 
 ```powershell

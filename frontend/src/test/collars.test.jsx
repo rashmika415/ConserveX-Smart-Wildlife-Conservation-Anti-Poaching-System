@@ -68,6 +68,67 @@ const mountAlertDetails = () =>
     </MemoryRouter>,
   );
 
+describe('Overdue alert escalation', () => {
+  it('filters to escalated alerts still awaiting acknowledgement', () => {
+    resources['/alerts'] = [
+      {
+        _id: '1',
+        status: 'New',
+        message: 'Overdue elephant',
+        escalatedAt: '2026-10-07T00:00:00Z',
+      },
+      { _id: '2', status: 'New', message: 'Recent elephant' },
+      {
+        _id: '3',
+        status: 'Acknowledged',
+        message: 'Handled elephant',
+        escalatedAt: '2026-10-07T00:00:00Z',
+      },
+    ];
+    render(
+      <MemoryRouter>
+        <Alerts />
+      </MemoryRouter>,
+    );
+    fireEvent.change(screen.getByLabelText('Filter alerts'), {
+      target: { value: 'Escalated' },
+    });
+    expect(screen.getByText('Overdue elephant')).toBeInTheDocument();
+    expect(screen.queryByText('Recent elephant')).not.toBeInTheDocument();
+    expect(screen.queryByText('Handled elephant')).not.toBeInTheDocument();
+  });
+
+  it('shows overdue response feedback and still lets a ranger acknowledge', async () => {
+    user.role = 'RANGER';
+    resources['/alerts/alert-1'] = {
+      _id: 'alert-1',
+      status: 'New',
+      escalatedAt: '2026-10-07T00:00:00Z',
+    };
+    api.patch.mockResolvedValue({ data: { message: 'Alert acknowledged' } });
+    mountAlertDetails();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'acknowledgement overdue',
+    );
+    expect(screen.getByText('Escalated at')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge alert' }));
+    await waitFor(() =>
+      expect(api.patch).toHaveBeenCalledWith('/alerts/alert-1/acknowledge'),
+    );
+  });
+
+  it('retains escalation history after acknowledgement without an overdue warning', () => {
+    resources['/alerts/alert-1'] = {
+      _id: 'alert-1',
+      status: 'Acknowledged',
+      escalatedAt: '2026-10-07T00:00:00Z',
+    };
+    mountAlertDetails();
+    expect(screen.getByText('Escalated at')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
 describe('Collar monitoring screen', () => {
   it('shows safe and high-risk simulator outcomes with the submitted coordinates', async () => {
     api.post

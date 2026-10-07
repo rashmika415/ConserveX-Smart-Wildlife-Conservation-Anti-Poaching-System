@@ -10,7 +10,7 @@ Start with `npm run seed` and `npm run dev`. Use separate browser profiles or lo
 6. **Public sighting** — open `/report` without login. Enter a landmark, 3 elephants and optional direction/GPS/photo. Submit and save the receipt reference.
 7. **Community response** — log in as `officer@wildlife.lk` / `Officer123!`. Open the matching report, set Reviewing, record Monitor Situation with a note, and set Responding or Resolved. Verify the response actor/time.
 8. **Collar simulation** — as manager, Animal Tracking → choose GPS-C102 → Safe test location → Simulate Collar Reading. No alert is generated. Choose Village Boundary Zone and simulate again. Open the resulting alert. Repeat the reading to verify the same open alert is updated.
-9. **Acknowledgement** — as ranger or liaison, Alerts → new alert → Acknowledge alert. Confirm responder/time. As manager resolve it. Another zone-entry reading can now create a new alert.
+9. **Escalation and acknowledgement** — leave a new alert unacknowledged for 15 minutes (or temporarily use `ALERT_ESCALATION_MINUTES=0.1` and restart the API for a six-second demo). Open Alerts and select Escalated. Confirm the overdue warning and escalation time. As ranger or liaison, acknowledge it and confirm responder/time and that the active warning clears. As manager resolve it. Simulate an outside reading followed by zone re-entry to create a new alert. Restore the 15-minute threshold after the demo.
 10. **Mobile view** — at 390px width, open the menu, dashboard, incident form and public sighting form. Verify readable labels, wrapped actions and no page-level horizontal scrolling.
 
 ## Useful failure demonstrations

@@ -7,6 +7,7 @@ import {
 } from '../models/index.js';
 import { ApiError, success, requireRecord } from '../utils/apiError.js';
 import { createRiskZone, recordReading } from '../services/tracking.js';
+import { escalateOverdueAlerts } from '../services/alertEscalation.js';
 export async function animals(_req, res) {
   const [animals, collars] = await Promise.all([
     Animal.find().lean(),
@@ -50,13 +51,17 @@ const populate = (query) =>
     .populate('zoneId')
     .populate('acknowledgedBy', 'name')
     .populate('resolvedBy', 'name');
-export const alerts = async (_req, res) =>
+export const alerts = async (_req, res) => {
+  await escalateOverdueAlerts();
   success(res, await populate(Alert.find().sort({ updatedAt: -1 })));
-export const alert = async (req, res) =>
+};
+export const alert = async (req, res) => {
+  await escalateOverdueAlerts();
   success(
     res,
     requireRecord(await populate(Alert.findById(req.params.id)), 'Alert'),
   );
+};
 export async function acknowledge(req, res) {
   requireRecord(await Alert.findById(req.params.id), 'Alert');
   const alert = await Alert.findOneAndUpdate(

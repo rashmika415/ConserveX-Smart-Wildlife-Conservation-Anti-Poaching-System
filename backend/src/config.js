@@ -9,6 +9,7 @@ export const config = {
   frontendOrigin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173',
   mongodbUri: process.env.MONGODB_URI?.trim() || '',
   jwtSecret: process.env.JWT_SECRET || '',
+  alertEscalationMinutes: Number(process.env.ALERT_ESCALATION_MINUTES || 15),
 };
 export const uploadsPath = fileURLToPath(
   new URL('../uploads/', import.meta.url),
