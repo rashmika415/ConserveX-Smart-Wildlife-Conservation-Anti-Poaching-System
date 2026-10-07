@@ -71,6 +71,7 @@ export const Incident = model('Incident', {
   syncStatus: enumField(['Synced', 'Pending'], 'Synced'),
 });
 const waypoint = new Schema({
+  clientId: String,
   location: { type: point, required: true },
   type: { type: String, required: true },
   description: String,
