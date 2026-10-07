@@ -17,10 +17,17 @@ export const responseActions = [
   'Mark for Verification',
 ];
 export const incompleteReasons = [
-  'Weather',
-  'Injury',
-  'Hazard',
-  'Called Back',
+  'Medical Emergency',
+  'Vehicle Breakdown',
+  'Severe Weather',
+  'Unsafe Conditions',
+  'Blocked or Inaccessible Route',
+  'Wildlife Threat',
+  'Equipment Failure',
+  'Communication Failure',
+  'Emergency Reassignment',
+  'Security Threat',
+  'Insufficient Resources',
   'Other',
 ];
 const ref = (model, required = true) => ({
@@ -77,6 +84,7 @@ export const Patrol = model(
     parkName: { type: String, required: true },
     rangerId: ref('User'),
     scheduledDate: { type: Date, required: true },
+    scheduledEndTime: Date,
     checkpoints: [{ name: String, location: point }],
     waypoints: [waypoint],
     startTime: Date,
@@ -86,7 +94,17 @@ export const Patrol = model(
       ['Assigned', 'Active', 'Completed', 'Incomplete'],
       'Assigned',
     ),
-    incompleteReason: { type: String, enum: incompleteReasons },
+    incompleteReason: {
+      type: String,
+      enum: [
+        ...incompleteReasons,
+        'Weather',
+        'Injury',
+        'Hazard',
+        'Called Back',
+      ],
+    },
+    incompleteReasonDetails: { type: String, maxlength: 2000 },
     createdBy: ref('User'),
   },
   [
@@ -123,9 +141,9 @@ export const CollarReading = model('CollarReading', {
 export const RiskZone = model('RiskZone', {
   zoneName: { type: String, required: true, unique: true },
   description: String,
-  centerLatitude: Number,
-  centerLongitude: Number,
-  radius: { type: Number, min: 1 },
+  centerLatitude: { type: Number, required: true, min: -90, max: 90 },
+  centerLongitude: { type: Number, required: true, min: -180, max: 180 },
+  radius: { type: Number, required: true, min: 1, max: 100000 },
   riskLevel: enumField(['Low', 'Medium', 'High', 'Critical'], 'High'),
 });
 export const Alert = model(
@@ -161,6 +179,8 @@ export const CommunityReport = model('CommunityReport', {
   description: String,
   imageUrl: String,
   contact: String,
+  town: String,
+  district: String,
   status: enumField(
     ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'],
     'New',

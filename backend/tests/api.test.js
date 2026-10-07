@@ -24,13 +24,19 @@ const files = [];
 const auth = (method, url, role = 'RANGER') =>
   request(app)[method](url).set('Authorization', `Bearer ${tokens[role]}`);
 const point = { latitude: 6.45, longitude: 81.4 };
-const validPatrol = () => ({
-  routeName: 'Test boundary route',
-  parkName: 'Yala',
-  rangerId: String(users.ranger._id),
-  scheduledDate: new Date(Date.now() + Math.random() * 1e9).toISOString(),
-  checkpoints: [{ name: 'East gate', ...point }],
-});
+let patrolScheduleIndex = 0;
+const validPatrol = () => {
+  const scheduled =
+    Date.UTC(2035, 0, 1) + patrolScheduleIndex++ * 2 * 60 * 60 * 1000;
+  return {
+    routeName: 'Test boundary route',
+    parkName: 'Yala',
+    rangerId: String(users.ranger._id),
+    scheduledDate: new Date(scheduled).toISOString(),
+    scheduledEndTime: new Date(scheduled + 60 * 60 * 1000).toISOString(),
+    checkpoints: [{ name: 'East gate', ...point }],
+  };
+};
 const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=',
   'base64',
@@ -307,6 +313,48 @@ describe('Patrol lifecycle', () => {
       ).status,
     ).toBe(409);
   });
+  test('rejects overlapping assigned and active schedules but allows adjacent times and other rangers', async () => {
+    const make = (start, end, rangerId = String(outsider._id)) => ({
+      ...validPatrol(),
+      rangerId,
+      scheduledDate: `2040-01-01T${start}:00.000Z`,
+      scheduledEndTime: `2040-01-01T${end}:00.000Z`,
+    });
+    const assign = (body) => auth('post', '/api/patrols', 'MANAGER').send(body);
+    const existing = await assign(make('08:00', '12:00'));
+    expect(existing.status).toBe(201);
+    for (const [start, end] of [
+      ['10:00', '14:00'],
+      ['09:00', '11:00'],
+      ['07:00', '13:00'],
+      ['08:00', '12:00'],
+    ])
+      expect((await assign(make(start, end))).status).toBe(409);
+    expect((await assign(make('12:00', '14:00'))).status).toBe(201);
+    expect((await assign(make('06:00', '08:00'))).status).toBe(201);
+    expect(
+      (await assign(make('10:00', '14:00', String(users.ranger._id)))).status,
+    ).toBe(201);
+    await Patrol.findByIdAndUpdate(existing.body.data._id, {
+      status: 'Active',
+    });
+    expect((await assign(make('10:00', '14:00'))).status).toBe(409);
+    await Patrol.findByIdAndUpdate(existing.body.data._id, {
+      status: 'Completed',
+    });
+    expect((await assign(make('08:00', '12:00'))).status).toBe(201);
+    expect((await assign(make('15:00', '15:00'))).status).toBe(400);
+    expect((await assign(make('16:00', '15:00'))).status).toBe(400);
+    const missing = make('15:00', '16:00');
+    delete missing.scheduledEndTime;
+    expect((await assign(missing)).status).toBe(400);
+    await Patrol.deleteMany({
+      scheduledDate: {
+        $gte: new Date('2040-01-01'),
+        $lt: new Date('2040-01-02'),
+      },
+    });
+  });
   test('validates assignment, prevents conflicts and protects ownership', async () => {
     expect(
       (await auth('post', '/api/patrols', 'MANAGER').send({})).status,
@@ -364,12 +412,118 @@ describe('Patrol lifecycle', () => {
     ).toBe(400);
     const end = await auth('patch', `/api/patrols/${one}/end`).send({
       status: 'Incomplete',
-      incompleteReason: 'Weather',
+      incompleteReason: 'Severe Weather',
     });
-    expect(end.body.data.incompleteReason).toBe('Weather');
+    expect(end.body.data.incompleteReason).toBe('Severe Weather');
   });
 });
 describe('Collar monitoring and alerts', () => {
+  test('alerts only for readings within a risk-zone radius', async () => {
+    const zone = await RiskZone.create({
+      zoneName: `Boundary test ${Date.now()}`,
+      centerLatitude: 0,
+      centerLongitude: 0,
+      radius: 1000,
+      riskLevel: 'High',
+    });
+    try {
+      const outside = await auth(
+        'post',
+        '/api/collar-readings',
+        'MANAGER',
+      ).send({
+        collarId: 'GPS-C118',
+        latitude: 0,
+        longitude: 0.0091,
+      });
+      expect(outside.status).toBe(201);
+      expect(outside.body.data.alerts).toHaveLength(0);
+      const inside = await auth('post', '/api/collar-readings', 'MANAGER').send(
+        {
+          collarId: 'GPS-C118',
+          latitude: 0,
+          longitude: 0.0089,
+        },
+      );
+      expect(inside.status).toBe(201);
+      expect(inside.body.data.alerts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ zoneId: String(zone._id) }),
+        ]),
+      );
+    } finally {
+      await Alert.deleteMany({ zoneId: zone._id });
+      await RiskZone.deleteOne({ _id: zone._id });
+    }
+  });
+  test('manager defines a valid risk zone for future simulated readings', async () => {
+    const zoneName = `Test zone ${Date.now()}`;
+    const body = {
+      zoneName,
+      description: 'New test area',
+      centerLatitude: 7.25,
+      centerLongitude: 80.25,
+      radius: 250,
+      riskLevel: 'Critical',
+    };
+    expect((await auth('post', '/api/risk-zones').send(body)).status).toBe(403);
+    const created = await auth('post', '/api/risk-zones', 'MANAGER').send(body);
+    expect(created.status).toBe(201);
+    expect(created.body.data).toMatchObject(body);
+    expect((await RiskZone.findOne({ zoneName })).radius).toBe(250);
+    expect((await auth('get', '/api/risk-zones', 'MANAGER')).body.data).toEqual(
+      expect.arrayContaining([expect.objectContaining({ zoneName })]),
+    );
+    const detected = await auth('post', '/api/collar-readings', 'MANAGER').send(
+      {
+        collarId: 'GPS-C207',
+        latitude: body.centerLatitude,
+        longitude: body.centerLongitude,
+      },
+    );
+    expect(detected.status).toBe(201);
+    expect(detected.body.data.alerts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ zoneId: created.body.data._id }),
+      ]),
+    );
+    expect(
+      (await auth('post', '/api/risk-zones', 'MANAGER').send(body)).status,
+    ).toBe(409);
+    for (const [index, invalid] of [
+      { centerLatitude: '   ' },
+      { centerLongitude: 181 },
+      { radius: 0 },
+      { riskLevel: 'Low' },
+      { zoneName: '' },
+    ].entries()) {
+      expect(
+        (
+          await auth('post', '/api/risk-zones', 'MANAGER').send({
+            ...body,
+            zoneName: `${zoneName} invalid ${index}`,
+            ...invalid,
+          })
+        ).status,
+      ).toBe(400);
+    }
+    await Alert.deleteMany({ zoneId: created.body.data._id });
+    await RiskZone.deleteOne({ zoneName });
+  });
+  test('rejects blank collar coordinates before saving a reading', async () => {
+    const before = await CollarReading.countDocuments({ collarId: 'GPS-C102' });
+    const response = await auth('post', '/api/collar-readings', 'MANAGER').send(
+      {
+        collarId: 'GPS-C102',
+        latitude: '   ',
+        longitude: '   ',
+      },
+    );
+    expect(response.status).toBe(400);
+    expect(await CollarReading.countDocuments({ collarId: 'GPS-C102' })).toBe(
+      before,
+    );
+  });
   test('saves safe and risk readings, deduplicates alerts and records acknowledgement', async () => {
     await Alert.deleteMany({});
     const safe = await auth('post', '/api/collar-readings', 'MANAGER').send({
@@ -413,9 +567,25 @@ describe('Collar monitoring and alerts', () => {
     expect(
       (await auth('patch', `/api/alerts/${id}/resolve`, 'MANAGER')).status,
     ).toBe(409);
+    const stillInside = await auth(
+      'post',
+      '/api/collar-readings',
+      'MANAGER',
+    ).send(body);
+    expect(stillInside.status).toBe(201);
+    expect(stillInside.body.data.insideRiskZone).toBe(true);
+    expect(stillInside.body.data.alerts).toHaveLength(0);
+    expect(await Alert.countDocuments()).toBe(1);
+    const exit = await auth('post', '/api/collar-readings', 'MANAGER').send({
+      collarId: body.collarId,
+      latitude: 0,
+      longitude: 0,
+    });
+    expect(exit.body.data.insideRiskZone).toBe(false);
     const reentry = await auth('post', '/api/collar-readings', 'MANAGER').send(
       body,
     );
+    expect(reentry.status).toBe(201);
     expect(reentry.body.data.alerts[0]._id).not.toBe(id);
     expect(
       (

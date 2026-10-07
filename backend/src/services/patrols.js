@@ -6,6 +6,9 @@ export async function createPatrol(body, manager) {
   const routeName = text(body.routeName, 'Route name', true, 120);
   const parkName = text(body.parkName, 'Park / area', true, 120);
   const scheduledDate = date(body.scheduledDate, 'Scheduled date');
+  const scheduledEndTime = date(body.scheduledEndTime, 'Scheduled end time');
+  if (scheduledEndTime <= scheduledDate)
+    throw new ApiError(400, 'Scheduled end time must be after the start time');
   const ranger = requireRecord(
     await User.findById(text(body.rangerId, 'Ranger', true, 24)),
     'Ranger',
@@ -25,18 +28,26 @@ export async function createPatrol(body, manager) {
   if (
     await Patrol.exists({
       rangerId: ranger._id,
-      scheduledDate,
       status: { $in: ['Assigned', 'Active'] },
+      $or: [
+        {
+          scheduledDate: { $lt: scheduledEndTime },
+          scheduledEndTime: { $gt: scheduledDate },
+        },
+        // Older patrols have no planned end; reserve their time from the start onward.
+        { scheduledDate: { $lt: scheduledEndTime }, scheduledEndTime: null },
+      ],
     })
   )
     throw new ApiError(
       409,
-      'This ranger already has a patrol scheduled at that time',
+      'This ranger already has a scheduled or active patrol overlapping these times',
     );
   return Patrol.create({
     routeName,
     parkName,
     scheduledDate,
+    scheduledEndTime,
     rangerId: ranger._id,
     checkpoints,
     createdBy: manager._id,
@@ -100,6 +111,15 @@ export async function endPatrol(id, user, body) {
           'early termination reason',
         )
       : undefined;
+  const incompleteReasonDetails =
+    incompleteReason === 'Other'
+      ? text(
+          body.incompleteReasonDetails,
+          'Early termination reason details',
+          true,
+          2000,
+        )
+      : undefined;
   const endTime = new Date();
   const result = await Patrol.findOneAndUpdate(
     { _id: id, status: 'Active' },
@@ -107,6 +127,7 @@ export async function endPatrol(id, user, body) {
       status,
       endTime,
       incompleteReason,
+      incompleteReasonDetails,
       durationMinutes: Math.round((endTime - patrol.startTime) / 60000),
     },
     { new: true, runValidators: true },

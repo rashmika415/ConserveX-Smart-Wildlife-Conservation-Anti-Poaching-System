@@ -69,6 +69,7 @@ apiRouter.get('/animals', manager, tracking.animals);
 apiRouter.get('/animals/:id', manager, tracking.animal);
 apiRouter.get('/collars', manager, tracking.collars);
 apiRouter.get('/risk-zones', manager, tracking.zones);
+apiRouter.post('/risk-zones', manager, tracking.createZone);
 apiRouter.post('/collar-readings', manager, tracking.reading);
 apiRouter.get('/collar-readings/:collarId', manager, tracking.history);
 apiRouter.get('/alerts', tracking.alerts);

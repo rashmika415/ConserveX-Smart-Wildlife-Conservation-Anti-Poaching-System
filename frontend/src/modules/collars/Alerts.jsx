@@ -169,7 +169,7 @@ export function AlertDetails() {
       {confirm && (
         <ConfirmDialog
           title="Resolve this alert?"
-          message="A future risk-zone reading can create a new alert for this animal."
+          message="A new alert can be created if this animal leaves the zone and then re-enters."
           busy={busy}
           onCancel={() => setConfirm(false)}
           onConfirm={() => act('resolve')}

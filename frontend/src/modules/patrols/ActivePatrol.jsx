@@ -31,8 +31,10 @@ export default function ActivePatrol() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
+  const [endOptionsOpen, setEndOptionsOpen] = useState(false);
   const [endStatus, setEndStatus] = useState('Completed');
   const [reason, setReason] = useState('');
+  const [reasonDetails, setReasonDetails] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [formKey, setFormKey] = useState(0);
   async function action(path, body, method = 'patch') {
@@ -80,6 +82,8 @@ export default function ActivePatrol() {
                   <dd>{patrol.rangerId?.name}</dd>
                   <dt>Scheduled</dt>
                   <dd>{formatDate(patrol.scheduledDate)}</dd>
+                  <dt>Scheduled end</dt>
+                  <dd>{formatDate(patrol.scheduledEndTime)}</dd>
                   <dt>Started</dt>
                   <dd>{formatDate(patrol.startTime)}</dd>
                   <dt>Ended</dt>
@@ -90,12 +94,6 @@ export default function ActivePatrol() {
                       <dd>{patrol.durationMinutes} minutes</dd>
                       <dt>Waypoints recorded</dt>
                       <dd>{patrol.waypoints.length}</dd>
-                    </>
-                  )}
-                  {patrol.incompleteReason && (
-                    <>
-                      <dt>Ended early</dt>
-                      <dd>{patrol.incompleteReason}</dd>
                     </>
                   )}
                 </dl>
@@ -117,19 +115,45 @@ export default function ActivePatrol() {
                   </Link>
                 )}
               </section>
-              <section className="panel">
-                <h2>Route checkpoints</h2>
-                <ol className="checkpoint-list">
-                  {patrol.checkpoints.map((point, index) => (
-                    <li key={point._id || index}>
-                      <strong>{point.name}</strong>
-                      <span>
-                        {point.location.latitude}, {point.location.longitude}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </section>
+              <div className="patrol-side-panels">
+                {patrol.status === 'Incomplete' && (
+                  <section
+                    className="panel patrol-termination-panel"
+                    aria-labelledby="early-termination-heading"
+                  >
+                    <span className="patrol-termination-label">
+                      Patrol ended early
+                    </span>
+                    <h2 id="early-termination-heading">Early termination</h2>
+                    <dl className="details">
+                      <dt>Reason</dt>
+                      <dd>{patrol.incompleteReason || 'No reason recorded'}</dd>
+                      {patrol.incompleteReason === 'Other' &&
+                        patrol.incompleteReasonDetails && (
+                          <>
+                            <dt>Explanation</dt>
+                            <dd>{patrol.incompleteReasonDetails}</dd>
+                          </>
+                        )}
+                      <dt>Ended</dt>
+                      <dd>{formatDate(patrol.endTime)}</dd>
+                    </dl>
+                  </section>
+                )}
+                <section className="panel">
+                  <h2>Route checkpoints</h2>
+                  <ol className="checkpoint-list">
+                    {patrol.checkpoints.map((point, index) => (
+                      <li key={point._id || index}>
+                        <strong>{point.name}</strong>
+                        <span>
+                          {point.location.latitude}, {point.location.longitude}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              </div>
             </div>
             {user.role === 'RANGER' && patrol.status === 'Active' && (
               <div className="detail-grid section-gap">
@@ -176,6 +200,28 @@ export default function ActivePatrol() {
                   className="panel form-panel align-start"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    if (endStatus === 'Incomplete') {
+                      const form = event.currentTarget;
+                      const reasonField =
+                        form.elements.namedItem('incompleteReason');
+                      const detailsField = form.elements.namedItem(
+                        'incompleteReasonDetails',
+                      );
+                      reasonField.setCustomValidity(
+                        reason
+                          ? ''
+                          : 'Please fill this field: select a reason for ending early.',
+                      );
+                      if (detailsField) {
+                        detailsField.setCustomValidity(
+                          reasonDetails.trim()
+                            ? ''
+                            : 'Please fill this field: describe the reason for ending early.',
+                        );
+                      }
+                      if (!form.reportValidity()) return;
+                    }
+                    setError('');
                     setConfirm(true);
                   }}
                 >
@@ -183,31 +229,104 @@ export default function ActivePatrol() {
                   <p className="muted">
                     Ending a patrol saves its duration and final summary.
                   </p>
-                  <FormInput
-                    label="Outcome"
-                    value={endStatus}
-                    onChange={(e) => setEndStatus(e.target.value)}
-                    options={['Completed', 'Incomplete']}
-                  />
-                  {endStatus === 'Incomplete' && (
-                    <FormInput
-                      label="Reason for ending early"
-                      required
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      options={[
-                        '',
-                        'Weather',
-                        'Injury',
-                        'Hazard',
-                        'Called Back',
-                        'Other',
-                      ]}
-                    />
-                  )}
-                  <button className="button" disabled={busy}>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={busy}
+                    aria-expanded={endOptionsOpen}
+                    aria-controls="patrol-end-options"
+                    onClick={() => {
+                      setEndOptionsOpen((open) => !open);
+                      setEndStatus('Completed');
+                      setReason('');
+                    }}
+                  >
                     End Patrol
                   </button>
+                  {endOptionsOpen && (
+                    <div id="patrol-end-options" className="button-row">
+                      <button
+                        type="button"
+                        className="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setEndStatus('Completed');
+                          setReason('');
+                          setConfirm(true);
+                        }}
+                      >
+                        Complete Patrol
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        disabled={busy}
+                        onClick={() => setEndStatus('Incomplete')}
+                      >
+                        Terminate Early
+                      </button>
+                    </div>
+                  )}
+                  {endOptionsOpen && endStatus === 'Incomplete' && (
+                    <>
+                      <FormInput
+                        label="Reason for ending early"
+                        required
+                        name="incompleteReason"
+                        value={reason}
+                        onInvalid={(e) =>
+                          e.target.setCustomValidity(
+                            'Please fill this field: select a reason for ending early.',
+                          )
+                        }
+                        onChange={(e) => {
+                          e.target.setCustomValidity('');
+                          setReason(e.target.value);
+                        }}
+                        options={[
+                          '',
+                          'Medical Emergency',
+                          'Vehicle Breakdown',
+                          'Severe Weather',
+                          'Unsafe Conditions',
+                          'Blocked or Inaccessible Route',
+                          'Wildlife Threat',
+                          'Equipment Failure',
+                          'Communication Failure',
+                          'Emergency Reassignment',
+                          'Security Threat',
+                          'Insufficient Resources',
+                          'Other',
+                        ]}
+                      />
+                      {reason === 'Other' && (
+                        <FormInput
+                          label="Describe the reason for ending early"
+                          multiline
+                          required
+                          maxLength={2000}
+                          name="incompleteReasonDetails"
+                          value={reasonDetails}
+                          onInvalid={(e) =>
+                            e.target.setCustomValidity(
+                              'Please fill this field: describe the reason for ending early.',
+                            )
+                          }
+                          onChange={(e) => {
+                            e.target.setCustomValidity(
+                              e.target.value.trim()
+                                ? ''
+                                : 'Please fill this field: describe the reason for ending early.',
+                            );
+                            setReasonDetails(e.target.value);
+                          }}
+                        />
+                      )}
+                      <button className="button" disabled={busy}>
+                        Confirm early termination
+                      </button>
+                    </>
+                  )}
                 </form>
               </div>
             )}
@@ -245,7 +364,13 @@ export default function ActivePatrol() {
           busy={busy}
           onCancel={() => setConfirm(false)}
           onConfirm={() =>
-            action('end', { status: endStatus, incompleteReason: reason })
+            action('end', {
+              status: endStatus,
+              incompleteReason: reason,
+              ...(endStatus === 'Incomplete' && reason === 'Other'
+                ? { incompleteReasonDetails: reasonDetails.trim() }
+                : {}),
+            })
           }
         />
       )}
