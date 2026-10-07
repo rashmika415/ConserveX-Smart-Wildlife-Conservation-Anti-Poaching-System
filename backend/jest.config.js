@@ -5,7 +5,7 @@ export default {
   testTimeout: 120000,
   collectCoverageFrom: [
     'src/controllers/**/*.js',
-    'src/services/{patrols,tracking,alertEscalation}.js',
+    'src/services/{patrols,tracking,alertEscalation,collarSimulator}.js',
     'src/middleware/**/*.js',
     'src/utils/**/*.js',
   ],

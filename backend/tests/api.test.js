@@ -371,6 +371,57 @@ describe('Patrol lifecycle', () => {
   });
 });
 describe('Collar monitoring and alerts', () => {
+  test('safe simulation avoids newly created zones and preserves normal detection and validation', async () => {
+    const created = await auth('post', '/api/risk-zones', 'MANAGER').send({
+      zoneName: 'Safe simulator origin regression',
+      centerLatitude: 0,
+      centerLongitude: 0,
+      radius: 100000,
+      riskLevel: 'Critical',
+    });
+    expect(created.status).toBe(201);
+    const zoneId = created.body.data._id;
+    const collarId = 'GPS-C118';
+    try {
+      const risk = await auth('post', '/api/collar-readings', 'MANAGER').send({
+        collarId,
+        latitude: 0,
+        longitude: 0,
+      });
+      expect(risk.body.data.insideRiskZone).toBe(true);
+      const before = await Alert.countDocuments();
+      const safe = await auth('post', '/api/collar-readings', 'MANAGER').send({
+        collarId,
+        simulation: 'safe',
+      });
+      expect(safe.status).toBe(201);
+      expect(safe.body.data).toMatchObject({
+        insideRiskZone: false,
+        alerts: [],
+      });
+      expect([
+        safe.body.data.reading.latitude,
+        safe.body.data.reading.longitude,
+      ]).not.toEqual([0, 0]);
+      expect(
+        await CollarReading.findById(safe.body.data.reading._id),
+      ).toBeTruthy();
+      expect(await Alert.countDocuments()).toBe(before);
+      for (const [body, role, status] of [
+        [{ collarId, simulation: 'unknown' }, 'MANAGER', 400],
+        [{ collarId: 'missing', simulation: 'safe' }, 'MANAGER', 404],
+        [{ collarId, simulation: 'safe' }, 'RANGER', 403],
+        [{ collarId }, 'MANAGER', 400],
+      ]) {
+        expect(
+          (await auth('post', '/api/collar-readings', role).send(body)).status,
+        ).toBe(status);
+      }
+    } finally {
+      await Alert.deleteMany({ zoneId });
+      await RiskZone.deleteOne({ _id: zoneId });
+    }
+  });
   test('escalates at the deadline once, preserves history, and excludes handled alerts', async () => {
     const now = new Date();
     const deadline = new Date(

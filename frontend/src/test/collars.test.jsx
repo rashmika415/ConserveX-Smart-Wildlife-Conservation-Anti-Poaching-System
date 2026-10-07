@@ -130,6 +130,51 @@ describe('Overdue alert escalation', () => {
 });
 
 describe('Collar monitoring screen', () => {
+  it('does not silently simulate safe coordinates when a selected risk zone disappears', () => {
+    const view = mountTracking();
+    fireEvent.change(screen.getByLabelText(/GPS collar/), {
+      target: { value: 'GPS-C102' },
+    });
+    fireEvent.change(screen.getByLabelText('Simulated location'), {
+      target: { value: 'zone-1' },
+    });
+    resources['/risk-zones'] = [];
+    view.rerender(
+      <MemoryRouter>
+        <AnimalTracking />
+      </MemoryRouter>,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Simulate Collar Reading' }),
+    );
+    expect(api.post).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Select an available risk zone',
+    );
+  });
+  it('requests a server-selected safe location even when a displayed zone covers the origin', async () => {
+    resources['/risk-zones'][0].centerLatitude = 0;
+    resources['/risk-zones'][0].centerLongitude = 0;
+    api.post.mockResolvedValue({
+      data: { data: { alerts: [], insideRiskZone: false } },
+    });
+    mountTracking();
+    fireEvent.change(screen.getByLabelText(/GPS collar/), {
+      target: { value: 'GPS-C102' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Simulate Collar Reading' }),
+    );
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith('/collar-readings', {
+        collarId: 'GPS-C102',
+        simulation: 'safe',
+      }),
+    );
+    expect(
+      await screen.findByText(/Outside high-risk zones/),
+    ).toBeInTheDocument();
+  });
   it('shows safe and high-risk simulator outcomes with the submitted coordinates', async () => {
     api.post
       .mockResolvedValueOnce({ data: { data: { alerts: [] } } })
@@ -148,8 +193,7 @@ describe('Collar monitoring screen', () => {
     ).toBeInTheDocument();
     expect(api.post).toHaveBeenNthCalledWith(1, '/collar-readings', {
       collarId: 'GPS-C102',
-      latitude: 0,
-      longitude: 0,
+      simulation: 'safe',
     });
     fireEvent.change(screen.getByLabelText('Simulated location'), {
       target: { value: 'zone-1' },
@@ -232,8 +276,7 @@ describe('Collar monitoring screen', () => {
     await waitFor(() =>
       expect(api.post).toHaveBeenCalledWith('/collar-readings', {
         collarId: 'INVALID-DEMO-COLLAR',
-        latitude: 0,
-        longitude: 0,
+        simulation: 'safe',
       }),
     );
     expect(await screen.findByRole('alert')).toHaveTextContent(
