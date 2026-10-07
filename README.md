@@ -152,6 +152,24 @@ To demonstrate escalation quickly, temporarily set `ALERT_ESCALATION_MINUTES=0.1
 
 ## Tests and build
 
+### Run the complete Member Two demo
+
+```powershell
+npm.cmd run demo:collars
+```
+
+This one command starts a disposable local MongoDB database, the API on **4200**, and the frontend at **http://127.0.0.1:5175**. It seeds the demo users and runs real API simulations for zone creation, safe location selection (including a zone covering the origin), risk entry, concurrent duplicate prevention, invalid collar/coordinates, saved history, escalation, Ranger/CLO acknowledgement, resolution, and exit/re-entry. Each successful scenario prints `PASS`; failures stop the demo with a nonzero exit code. Ports 4200 and 5175 must be free.
+
+Escalation uses a **six-second threshold for this demo process only**. It does not edit `.env` or connect to your configured database. After simulations, open the printed URL and use the standard demo accounts above. The script leaves a live alert and resolved/acknowledged examples for inspection. Press **Ctrl+C** to stop the services and discard the temporary data. A normal API run still uses its configured escalation threshold (15 minutes by default).
+
+For an automated run that shuts down after checking all scenarios:
+
+```powershell
+npm.cmd run demo:collars -- --check
+```
+
+Dependencies must already be installed. Like the backend tests, this uses the local/cached MongoDB binary or downloads one on first use; `MONGOMS_SYSTEM_BINARY` can select an installed binary. The script prints the browser URL without launching a browser automatically.
+
 ```powershell
 npm.cmd test
 npm.cmd run test:coverage
