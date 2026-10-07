@@ -1862,3 +1862,303 @@ th {
     scroll-behavior: auto !important;
   }
 }
+
+/* Ranger workspace: forest, ivory, sage and a quiet touch of gold. */
+.ranger-shell {
+  --forest: #163d30;
+  --green: #28513d;
+  --muted: #758073;
+  --line: #e3e4d9;
+  --shadow: 0 5px 24px #233d2e06;
+  background: #f6f5ed;
+  color: #203c2e;
+}
+.ranger-shell .sidebar {
+  background: #163d30;
+}
+.ranger-shell .brand-mark {
+  background: #ffffff09;
+  border-color: #9eac7955;
+  color: #d7c690;
+}
+.ranger-shell .brand-x {
+  color: #cebb81;
+}
+.ranger-shell .sidebar nav a {
+  border-radius: 9px;
+}
+.ranger-shell .sidebar nav a.active {
+  background: #dce3cd;
+  color: #203e30;
+  box-shadow: inset 3px 0 #b49a5d;
+}
+.ranger-shell .protected {
+  border-color: #9cae7e40;
+  background: #ffffff03;
+}
+.ranger-shell .topbar {
+  background: #fcfbf6;
+  border-color: #e3e4d9;
+}
+.ranger-shell .avatar {
+  background: #e6ead9;
+  color: #506043;
+  border: 1px solid #d8dec7;
+}
+.ranger-shell .panel,
+.ranger-shell .stat-card {
+  background: #fffef9;
+  border-color: var(--line);
+  border-radius: 14px;
+}
+.ranger-shell .button {
+  border-radius: 9px;
+}
+.ranger-shell .button.secondary {
+  background: #fffef9;
+}
+.ranger-shell .badge {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.ranger-shell .badge-active,
+.ranger-shell .badge-completed,
+.ranger-shell .badge-synced {
+  background: #e7eddf;
+  color: #385940;
+}
+.ranger-shell .badge-assigned,
+.ranger-shell .badge-pending {
+  background: #f1ead7;
+  color: #806c3c;
+}
+.ranger-shell .app-footer {
+  border-color: var(--line);
+  color: #828979;
+}
+.ranger-dashboard .page-heading {
+  align-items: center;
+  margin-bottom: 28px;
+}
+.ranger-dashboard .page-heading h1 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: clamp(2rem, 3.3vw, 3.1rem);
+  letter-spacing: -0.04em;
+}
+.ranger-dashboard .page-heading .eyebrow {
+  color: #8a7b56;
+  font-size: 0.61rem;
+}
+.ranger-dashboard .page-heading p:not(.eyebrow) {
+  color: #758073;
+}
+.ranger-dashboard .date-chip {
+  background: #eeeee3;
+  border-color: #dedfce;
+  color: #647057;
+  border-radius: 7px;
+}
+.ranger-dashboard .dashboard-content {
+  display: flex;
+  flex-direction: column;
+}
+.ranger-dashboard .operations-banner {
+  order: -1;
+  position: relative;
+  isolation: isolate;
+  min-height: 220px;
+  margin: 0 0 24px;
+  padding: 36px;
+  border: 1px solid #305440;
+  border-radius: 16px;
+  background: #163d30;
+  box-shadow: 0 12px 30px #163d3012;
+}
+.ranger-dashboard .operations-banner::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  width: 620px;
+  height: 620px;
+  right: -200px;
+  top: -250px;
+  border-radius: 45%;
+  transform: rotate(-20deg);
+  background: repeating-radial-gradient(
+    ellipse at center,
+    transparent 0 27px,
+    #b9c49416 28px 29px,
+    transparent 30px 45px
+  );
+}
+.ranger-dashboard .operations-banner .eyebrow {
+  color: #cfbd87;
+  letter-spacing: 0.2em;
+}
+.ranger-dashboard .operations-banner h2 {
+  max-width: 430px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: clamp(1.8rem, 2.7vw, 2.65rem);
+  line-height: 1.15;
+  margin: 13px 0;
+}
+.ranger-dashboard .operations-banner p {
+  color: #bdcbbd;
+  max-width: 390px;
+  line-height: 1.7;
+}
+.ranger-dashboard .button.light {
+  background: #e6dcc0;
+  border-color: #e6dcc0;
+  color: #254131;
+}
+.ranger-dashboard .button.light:hover {
+  background: #f1e7cd;
+}
+.ranger-dashboard .banner-actions {
+  position: relative;
+  align-items: stretch;
+  min-width: 165px;
+}
+.ranger-dashboard .banner-actions > a:not(.button) {
+  justify-content: center;
+  color: #d2dcc8;
+}
+.ranger-dashboard .stats-grid {
+  gap: 18px;
+}
+.ranger-dashboard .stat-card {
+  position: relative;
+  padding: 22px;
+  box-shadow: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.ranger-dashboard .stat-card:hover {
+  border-color: #a9b498;
+  box-shadow: 0 6px 20px #25413109;
+}
+.ranger-dashboard .stat-top {
+  color: #6b7767;
+}
+.ranger-dashboard .stat-top svg {
+  color: #788c65;
+}
+.ranger-dashboard .stat-card.orange .stat-top svg,
+.ranger-dashboard .stat-card.amber .stat-top svg {
+  color: #a28b50;
+}
+.ranger-dashboard .stat-card.blue .stat-top svg {
+  color: #788c65;
+}
+.ranger-dashboard .stat-card > strong {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: 2.7rem;
+  margin: 14px 0;
+}
+.ranger-dashboard .stat-foot {
+  border-color: #ecece2;
+  color: #87917f;
+}
+.ranger-dashboard .ranger-patrol-panel {
+  border-left: 3px solid #af995d;
+  padding: 27px 30px;
+}
+.ranger-dashboard .ranger-patrol-panel .section-heading {
+  color: #788864;
+}
+.ranger-dashboard .ranger-patrol-panel h2 {
+  font-size: 0.71rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #6c7863;
+}
+.ranger-dashboard .current-patrol h3 {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+}
+.ranger-route-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 18px;
+  font-size: 0.72rem;
+  color: #758073;
+}
+.ranger-route-facts strong {
+  font-size: 0.95rem;
+  color: #3e5940;
+  margin-right: 5px;
+}
+.ranger-dashboard .recent-panel {
+  padding: 24px 24px 8px;
+  box-shadow: none;
+}
+.ranger-dashboard .recent-panel h2 {
+  font-size: 0.97rem;
+  font-weight: 700;
+}
+.ranger-dashboard .recent-item {
+  border-color: #eaece1;
+  padding: 18px 0;
+}
+.ranger-dashboard .recent-item:hover {
+  background: #f4f5ed;
+}
+.ranger-dashboard .empty {
+  color: #8a9381;
+  padding: 30px 10px;
+}
+.ranger-dashboard .dashboard-note {
+  color: #929886;
+  font-size: 0.67rem;
+}
+@media (max-width: 900px) {
+  .ranger-dashboard .operations-banner {
+    padding: 28px;
+  }
+  .ranger-dashboard .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .ranger-dashboard .page-heading {
+    align-items: flex-start;
+  }
+  .ranger-dashboard .operations-banner {
+    padding: 25px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .ranger-dashboard .banner-actions {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .ranger-dashboard .stat-card {
+    padding: 16px;
+  }
+  .ranger-dashboard .ranger-patrol-panel {
+    padding: 22px;
+  }
+  .ranger-dashboard .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .ranger-route-facts {
+    gap: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ranger-dashboard .stat-card {
+    transition: none;
+  }
+}

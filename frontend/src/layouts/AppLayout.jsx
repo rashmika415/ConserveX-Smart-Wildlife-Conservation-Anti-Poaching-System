@@ -44,7 +44,9 @@ export function AppLayout() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${user.role === 'RANGER' ? 'ranger-shell' : ''}`}
+    >
       {open && (
         <button
           className="sidebar-scrim"
