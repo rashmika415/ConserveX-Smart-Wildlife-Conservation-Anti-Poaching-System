@@ -85,7 +85,7 @@ export default function Dashboard() {
   }, [user.role, refresh]);
   const title = {
     MANAGER: 'Conservation overview',
-    RANGER: 'Your field workspace',
+    RANGER: 'The field, at a glance.',
     LIAISON: 'Community response overview',
   }[user.role];
   const currentPatrol =
@@ -98,8 +98,13 @@ export default function Dashboard() {
       )
       .sort((a, b) => new Date(b.respondedAt) - new Date(a.respondedAt)) || [];
   return (
-    <>
+    <div className={user.role === 'RANGER' ? 'ranger-dashboard' : ''}>
       <PageHeader
+        eyebrow={
+          user.role === 'RANGER'
+            ? 'RANGER OPERATIONS / YALA NATIONAL PARK'
+            : 'CONSERVATION OPERATIONS'
+        }
         title={title}
         description={`Welcome back, ${user.name.split(' ')[0]}. Here’s what needs your attention.`}
       >
@@ -122,7 +127,7 @@ export default function Dashboard() {
       )}
       {!data && !error && <LoadingSpinner />}
       {data && (
-        <>
+        <div className="dashboard-content">
           <div className="stats-grid">
             {user.role !== 'LIAISON' && (
               <>
@@ -204,15 +209,19 @@ export default function Dashboard() {
           </div>
           <section className="operations-banner">
             <div>
-              <span className="eyebrow">CONNECTED CONSERVATION</span>
+              <span className="eyebrow">
+                {user.role === 'RANGER'
+                  ? 'ON THE GROUND. FOR THE WILD.'
+                  : 'CONNECTED CONSERVATION'}
+              </span>
               <h2>
                 {user.role === 'RANGER'
-                  ? 'Your next observation matters.'
+                  ? 'Every patrol protects a future.'
                   : 'One park. One coordinated team.'}
               </h2>
               <p>
                 {user.role === 'RANGER'
-                  ? 'Keep your patrol progress and field reports up to date.'
+                  ? 'Stay ready. Follow your route. Make every observation count.'
                   : 'Track the field, listen to communities and act on risk.'}
               </p>
             </div>
@@ -243,8 +252,11 @@ export default function Dashboard() {
             </div>
           </section>
           {user.role === 'RANGER' && (
-            <section className="panel section-gap">
-              <h2>Current / next patrol</h2>
+            <section className="panel section-gap ranger-patrol-panel">
+              <div className="section-heading">
+                <h2>Current / next patrol</h2>
+                <Route size={20} aria-hidden="true" />
+              </div>
               {currentPatrol ? (
                 <div className="current-patrol">
                   <div>
@@ -254,6 +266,18 @@ export default function Dashboard() {
                       {formatDate(currentPatrol.scheduledDate)}
                     </p>
                     <StatusBadge status={currentPatrol.status} />
+                    <div className="ranger-route-facts">
+                      <span>
+                        <strong>
+                          {currentPatrol.checkpoints?.length || 0}
+                        </strong>{' '}
+                        Route checkpoints
+                      </span>
+                      <span>
+                        <strong>{currentPatrol.waypoints?.length || 0}</strong>{' '}
+                        Recorded waypoints
+                      </span>
+                    </div>
                   </div>
                   <Link
                     className="button"
@@ -343,8 +367,8 @@ export default function Dashboard() {
             Dashboard refreshes every 30 seconds · All figures reflect saved
             records
           </p>
-        </>
+        </div>
       )}
-    </>
+    </div>
   );
 }
