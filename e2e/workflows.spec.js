@@ -63,13 +63,14 @@ test('all four persisted flows connect public users, manager, ranger and liaison
   await page.getByLabel('Incident type').selectOption('Snare / Trap');
   await page.getByLabel('Latitude', { exact: false }).fill('6.45');
   await page.getByLabel('Longitude', { exact: false }).fill('81.4');
-  await page.getByLabel('Description (optional)').fill('Browser test incident');
-  await page.getByLabel('Simulate Offline').check();
-  await page.getByRole('button', { name: 'Submit incident report' }).click();
+  await page.getByLabel('Short description').fill('Browser test incident');
+  await page
+    .getByRole('button', { name: 'Submit and synchronize report' })
+    .click();
   await expect(
-    page.getByRole('heading', { name: 'Incident reported successfully' }),
+    page.getByRole('heading', { name: 'Incident synchronized successfully' }),
   ).toBeVisible();
-  await page.getByRole('link', { name: 'View incident history' }).click();
+  await page.getByRole('link', { name: 'View my incident history' }).click();
   await expect(
     page.getByText('Browser test incident', { exact: true }),
   ).toBeVisible();

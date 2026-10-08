@@ -22,16 +22,57 @@ export default function AnimalTracking() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [zoneValues, setZoneValues] = useState({
+    zoneName: '',
+    description: '',
+    centerLatitude: '',
+    centerLongitude: '',
+    radius: '',
+    riskLevel: 'High',
+  });
+  const [zoneError, setZoneError] = useState('');
+  const [zoneSuccess, setZoneSuccess] = useState('');
+  const [savingZone, setSavingZone] = useState(false);
+  async function createZone(event) {
+    event.preventDefault();
+    setZoneError('');
+    setZoneSuccess('');
+    setSavingZone(true);
+    try {
+      await api.post('/risk-zones', zoneValues);
+      setZoneSuccess(
+        'Risk zone created. It is available for simulated readings.',
+      );
+      setZoneValues({
+        zoneName: '',
+        description: '',
+        centerLatitude: '',
+        centerLongitude: '',
+        radius: '',
+        riskLevel: 'High',
+      });
+      zones.reload();
+    } catch (error) {
+      setZoneError(errorMessage(error));
+    } finally {
+      setSavingZone(false);
+    }
+  }
   async function simulate() {
     setError('');
     setResult(null);
     setBusy(true);
     const zone = zones.data?.find((zone) => zone._id === zoneId);
     try {
+      if (zoneId !== 'safe' && !zone) {
+        setError('Select an available risk zone and try again.');
+        return;
+      }
       const { data } = await api.post('/collar-readings', {
         collarId: selected,
-        latitude: zone ? zone.centerLatitude : 0,
-        longitude: zone ? zone.centerLongitude : 0,
+        ...(zoneId === 'safe'
+          ? { simulation: 'safe' }
+          : { latitude: zone.centerLatitude, longitude: zone.centerLongitude }),
       });
       setResult(data.data);
       setHistory(null);
@@ -130,6 +171,10 @@ export default function AnimalTracking() {
               onChange={(e) => setSelected(e.target.value)}
               options={[
                 { value: '', label: 'Select collar' },
+                {
+                  value: 'INVALID-DEMO-COLLAR',
+                  label: 'Simulate invalid collar ID',
+                },
                 ...(animals.data || []).map((animal) => ({
                   value: animal.collarId,
                   label: `${animal.collarId} · ${animal.tagName}`,
@@ -141,7 +186,10 @@ export default function AnimalTracking() {
               value={zoneId}
               onChange={(e) => setZoneId(e.target.value)}
               options={[
-                { value: 'safe', label: 'Safe test location (0, 0)' },
+                {
+                  value: 'safe',
+                  label: 'Safe test location (outside risk zones)',
+                },
                 ...(zones.data || []).map((zone) => ({
                   value: zone._id,
                   label: `${zone.zoneName} · ${zone.riskLevel}`,
@@ -163,6 +211,8 @@ export default function AnimalTracking() {
                   View alert →
                 </Link>
               </>
+            ) : result.insideRiskZone ? (
+              'Inside a high-risk zone. No new alert until the animal exits and re-enters.'
             ) : (
               'Outside high-risk zones; no alert generated.'
             )}
@@ -198,6 +248,88 @@ export default function AnimalTracking() {
           <p className="muted">Most recent 100 readings.</p>
         </section>
       )}
+      <section className="panel section-gap">
+        <h2>Define a high-risk zone</h2>
+        <p className="muted">
+          Create a circular test zone for the collar simulator. Radius is
+          measured in metres.
+        </p>
+        <Feedback error={zoneError} success={zoneSuccess} />
+        <form className="form-panel" onSubmit={createZone}>
+          <FormInput
+            label="Zone name"
+            required
+            maxLength={120}
+            value={zoneValues.zoneName}
+            onChange={(e) =>
+              setZoneValues((p) => ({ ...p, zoneName: e.target.value }))
+            }
+          />
+          <FormInput
+            label="Zone description (optional)"
+            maxLength={2000}
+            value={zoneValues.description}
+            onChange={(e) =>
+              setZoneValues((p) => ({ ...p, description: e.target.value }))
+            }
+          />
+          <div className="form-grid">
+            <FormInput
+              label="Zone centre latitude"
+              required
+              type="number"
+              min="-90"
+              max="90"
+              step="any"
+              value={zoneValues.centerLatitude}
+              onChange={(e) =>
+                setZoneValues((p) => ({ ...p, centerLatitude: e.target.value }))
+              }
+            />
+            <FormInput
+              label="Zone centre longitude"
+              required
+              type="number"
+              min="-180"
+              max="180"
+              step="any"
+              value={zoneValues.centerLongitude}
+              onChange={(e) =>
+                setZoneValues((p) => ({
+                  ...p,
+                  centerLongitude: e.target.value,
+                }))
+              }
+            />
+          </div>
+          <div className="form-grid">
+            <FormInput
+              label="Radius (metres)"
+              required
+              type="number"
+              min="1"
+              max="100000"
+              step="any"
+              value={zoneValues.radius}
+              onChange={(e) =>
+                setZoneValues((p) => ({ ...p, radius: e.target.value }))
+              }
+            />
+            <FormInput
+              label="Risk level"
+              required
+              options={['High', 'Critical']}
+              value={zoneValues.riskLevel}
+              onChange={(e) =>
+                setZoneValues((p) => ({ ...p, riskLevel: e.target.value }))
+              }
+            />
+          </div>
+          <button className="button" disabled={savingZone}>
+            {savingZone ? 'Creating zone…' : 'Create risk zone'}
+          </button>
+        </form>
+      </section>
       <section className="section-gap">
         <h2>Monitored risk zones</h2>
         <div className="three-grid">

@@ -16,8 +16,20 @@ describe('Validation and distance boundaries', () => {
       expect(() => text(value, 'Name', true, 3)).toThrow();
   });
   test('rejects coercible non-numbers and validates paired coordinates', () => {
-    for (const value of [null, '', false, [], {}, Infinity, 'NaN', 91, -91])
+    for (const value of [
+      null,
+      '',
+      '   ',
+      false,
+      [],
+      {},
+      Infinity,
+      'NaN',
+      91,
+      -91,
+    ])
       expect(() => number(value, 'Latitude', -90, 90)).toThrow();
+    expect(() => location({ latitude: '   ', longitude: '   ' })).toThrow();
     expect(number('0', 'Latitude', -90, 90)).toBe(0);
     expect(location({ location: { latitude: -90, longitude: 180 } })).toEqual({
       latitude: -90,

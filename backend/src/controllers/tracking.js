@@ -6,7 +6,8 @@ import {
   Alert,
 } from '../models/index.js';
 import { ApiError, success, requireRecord } from '../utils/apiError.js';
-import { recordReading } from '../services/tracking.js';
+import { createRiskZone, recordReading } from '../services/tracking.js';
+import { escalateOverdueAlerts } from '../services/alertEscalation.js';
 export async function animals(_req, res) {
   const [animals, collars] = await Promise.all([
     Animal.find().lean(),
@@ -33,6 +34,8 @@ export const animal = async (req, res) => {
 export const collars = async (_req, res) =>
   success(res, await Collar.find().populate('animalId'));
 export const zones = async (_req, res) => success(res, await RiskZone.find());
+export const createZone = async (req, res) =>
+  success(res, await createRiskZone(req.body), 'Risk zone created', 201);
 export const reading = async (req, res) =>
   success(res, await recordReading(req.body), 'Collar reading saved', 201);
 export const history = async (req, res) =>
@@ -48,13 +51,17 @@ const populate = (query) =>
     .populate('zoneId')
     .populate('acknowledgedBy', 'name')
     .populate('resolvedBy', 'name');
-export const alerts = async (_req, res) =>
+export const alerts = async (_req, res) => {
+  await escalateOverdueAlerts();
   success(res, await populate(Alert.find().sort({ updatedAt: -1 })));
-export const alert = async (req, res) =>
+};
+export const alert = async (req, res) => {
+  await escalateOverdueAlerts();
   success(
     res,
     requireRecord(await populate(Alert.findById(req.params.id)), 'Alert'),
   );
+};
 export async function acknowledge(req, res) {
   requireRecord(await Alert.findById(req.params.id), 'Alert');
   const alert = await Alert.findOneAndUpdate(

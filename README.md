@@ -4,14 +4,16 @@ A mobile-friendly university assignment application connecting park managers, ra
 
 ## Implemented use cases
 
-| Member | Use case                          | Complete flow                                                                                                                                                     |
-| ------ | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1      | Incident Management               | Ranger reports an incident with GPS/manual location and optional photo → confirmation → own history → manager review/status update.                               |
-| 2      | GPS Collar / High-Risk Zone Alert | Manager simulates a collar reading → MongoDB stores movement → circular zone detection creates/updates an alert → ranger/liaison acknowledges → manager resolves. |
-| 3      | Patrol Management                 | Manager creates route/checkpoints and assigns ranger → ranger starts → records waypoints/photos → completes or ends early with reason → manager views summary.    |
-| 4      | Community Reporting               | Public sighting without login → receipt → authorized staff review → response action with actor/time → status update.                                              |
+| Member | Use case                          | Complete flow                                                                                                                                                                        |
+| ------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1      | Incident Management               | Ranger reports an incident with GPS/manual location and optional photo → confirmation → own history → manager review/status update.                                                  |
+| 2      | GPS Collar / High-Risk Zone Alert | Manager defines a circular risk zone and simulates a collar reading → MongoDB stores movement → detection creates/updates an alert → ranger/liaison acknowledges → manager resolves. |
+| 3      | Patrol Management                 | Manager creates route/checkpoints and assigns ranger → ranger starts → records waypoints/photos → completes or ends early with reason → manager views summary.                       |
+| 4      | Community Reporting               | Public sighting without login → receipt → authorized staff review → response action with actor/time → status update.                                                                 |
 
 Role-specific dashboards combine saved records, open counts and recent activity. The interface includes mobile navigation, status badges, loading/empty states, filters, confirmation dialogs and schematic coordinate cards. No paid API or hardware is required.
+
+Staff headers include an alert notification bell. Its badge counts alerts awaiting acknowledgement (not per-user unread messages). The dropdown shows up to five open alerts, prioritizes escalated alerts, and links to alert details or the full list. It refreshes every 30 seconds, when opened, on page navigation, and when the window regains focus. Opening a notification does not acknowledge it; use the existing Ranger/CLO acknowledgement action. Resolved alerts disappear from the dropdown after refresh.
 
 ## Technology and architecture
 
@@ -129,6 +131,7 @@ All routes below are under `/api`. Protected requests use `Authorization: Bearer
 | `GET /patrols`, `GET /patrols/:id`, `GET /patrols/ranger/:rangerId`                 | Manager; ranger restricted to own patrols |
 | `PATCH /patrols/:id/start`, `POST /patrols/:id/waypoints`, `PATCH /patrols/:id/end` | Assigned ranger                           |
 | `GET /animals`, `GET /animals/:id`, `GET /collars`, `GET /risk-zones`               | Manager                                   |
+| `POST /risk-zones`                                                                  | Manager                                   |
 | `POST /collar-readings`, `GET /collar-readings/:collarId`                           | Manager                                   |
 | `GET /alerts`, `GET /alerts/:id`                                                    | All staff                                 |
 | `PATCH /alerts/:id/acknowledge`                                                     | Ranger or liaison                         |
@@ -139,7 +142,35 @@ All routes below are under `/api`. Protected requests use `Authorization: Bearer
 
 Creation endpoints for incidents, waypoints and community reports accept JSON without a photo, or `multipart/form-data` with a `photo` field. Coordinates may be flat `latitude`/`longitude` fields or a `location` object in JSON. Community coordinates are optional as a pair. Photos accept PNG/JPEG/WebP signatures up to 5 MB; randomized names are stored under `backend/uploads` and served through `/uploads`.
 
+On **Animal Tracking**, a manager can create a high-risk zone with a unique name, centre coordinates, radius in metres, and High or Critical risk level. The new zone appears in the simulator after saving. Choose **Simulate invalid collar ID** to demonstrate collar validation without changing stored collars. `POST /risk-zones` accepts JSON fields `zoneName`, optional `description`, `centerLatitude`, `centerLongitude`, `radius`, and `riskLevel`.
+
+Each reading records whether its collar is inside a high-risk zone. An open alert is updated by repeated inside readings. After an alert is resolved, a new alert requires a reading outside that zone followed by a reading inside it.
+
+The **Safe test location (outside risk zones)** option sends `{ "collarId": "GPS-C102", "simulation": "safe" }` to `POST /collar-readings`. The backend chooses coordinates outside the current High/Critical zones, including manager-created zones covering (0, 0), using the same zone snapshot and distance calculation as detection. If its bounded search cannot find a safe candidate, it returns an error without saving a reading. Ordinary readings still require valid coordinates; collar validation and manager-only access apply to both modes.
+
+Unacknowledged alerts are automatically flagged **Escalated** after 15 minutes from first detection. Set `ALERT_ESCALATION_MINUTES` in `backend/.env` to a positive number to change the threshold, then restart the API. The API checks at startup and every 30 seconds even without viewers; alert list/detail requests also check for overdue alerts. Repeated readings do not extend the deadline. Escalation records `escalatedAt` once, preserving the existing priority and New/Acknowledged/Resolved lifecycle. The flag appears in staff dashboards and alerts, with an Escalated filter for alerts still awaiting acknowledgement. Ranger/CLO acknowledgement clears the active warning; escalation history remains after acknowledgement or manager resolution. This is an in-app flag, not SMS/email delivery.
+
+To demonstrate escalation quickly, temporarily set `ALERT_ESCALATION_MINUTES=0.1` (six seconds), restart the API, simulate a fresh risk-zone entry, and leave it unacknowledged. Open Alerts after six seconds or wait for its 30-second refresh. Acknowledge as Ranger/CLO and verify the warning clears. Restore `15` and restart after the demo.
+
 ## Tests and build
+
+### Run the complete Member Two demo
+
+```powershell
+npm.cmd run demo:collars
+```
+
+This one command starts a disposable local MongoDB database, the API on **4200**, and the frontend at **http://127.0.0.1:5175**. It seeds the demo users and runs real API simulations for zone creation, safe location selection (including a zone covering the origin), risk entry, concurrent duplicate prevention, invalid collar/coordinates, saved history, escalation, Ranger/CLO acknowledgement, resolution, and exit/re-entry. Each successful scenario prints `PASS`; failures stop the demo with a nonzero exit code. Ports 4200 and 5175 must be free.
+
+Escalation uses a **six-second threshold for this demo process only**. It does not edit `.env` or connect to your configured database. After simulations, open the printed URL and use the standard demo accounts above. The script leaves a live alert and resolved/acknowledged examples for inspection. Press **Ctrl+C** to stop the services and discard the temporary data. A normal API run still uses its configured escalation threshold (15 minutes by default).
+
+For an automated run that shuts down after checking all scenarios:
+
+```powershell
+npm.cmd run demo:collars -- --check
+```
+
+Dependencies must already be installed. Like the backend tests, this uses the local/cached MongoDB binary or downloads one on first use; `MONGOMS_SYSTEM_BINARY` can select an installed binary. The script prints the browser URL without launching a browser automatically.
 
 ```powershell
 npm.cmd test

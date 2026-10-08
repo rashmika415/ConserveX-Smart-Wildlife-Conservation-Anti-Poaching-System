@@ -17,10 +17,17 @@ export const responseActions = [
   'Mark for Verification',
 ];
 export const incompleteReasons = [
-  'Weather',
-  'Injury',
-  'Hazard',
-  'Called Back',
+  'Medical Emergency',
+  'Vehicle Breakdown',
+  'Severe Weather',
+  'Unsafe Conditions',
+  'Blocked or Inaccessible Route',
+  'Wildlife Threat',
+  'Equipment Failure',
+  'Communication Failure',
+  'Emergency Reassignment',
+  'Security Threat',
+  'Insufficient Resources',
   'Other',
 ];
 const ref = (model, required = true) => ({
@@ -55,15 +62,24 @@ export const User = model('User', {
 });
 export const Incident = model('Incident', {
   incidentType: enumField(incidentTypes, undefined),
-  description: String,
+  description: { type: String, required: true, maxlength: 500 },
   location: { type: point, required: true },
   imageUrl: String,
   rangerId: ref('User'),
   patrolId: ref('Patrol', false),
   status: enumField(['Reported', 'Under Review', 'Resolved'], 'Reported'),
   syncStatus: enumField(['Synced', 'Pending'], 'Synced'),
+  clientReportId: { type: String, maxlength: 100 },
 });
+Incident.schema.index(
+  { rangerId: 1, clientReportId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { clientReportId: { $type: 'string' } },
+  },
+);
 const waypoint = new Schema({
+  clientId: String,
   location: { type: point, required: true },
   type: { type: String, required: true },
   description: String,
@@ -77,6 +93,7 @@ export const Patrol = model(
     parkName: { type: String, required: true },
     rangerId: ref('User'),
     scheduledDate: { type: Date, required: true },
+    scheduledEndTime: Date,
     checkpoints: [{ name: String, location: point }],
     waypoints: [waypoint],
     startTime: Date,
@@ -86,7 +103,17 @@ export const Patrol = model(
       ['Assigned', 'Active', 'Completed', 'Incomplete'],
       'Assigned',
     ),
-    incompleteReason: { type: String, enum: incompleteReasons },
+    incompleteReason: {
+      type: String,
+      enum: [
+        ...incompleteReasons,
+        'Weather',
+        'Injury',
+        'Hazard',
+        'Called Back',
+      ],
+    },
+    incompleteReasonDetails: { type: String, maxlength: 2000 },
     createdBy: ref('User'),
   },
   [
@@ -123,9 +150,9 @@ export const CollarReading = model('CollarReading', {
 export const RiskZone = model('RiskZone', {
   zoneName: { type: String, required: true, unique: true },
   description: String,
-  centerLatitude: Number,
-  centerLongitude: Number,
-  radius: { type: Number, min: 1 },
+  centerLatitude: { type: Number, required: true, min: -90, max: 90 },
+  centerLongitude: { type: Number, required: true, min: -180, max: 180 },
+  radius: { type: Number, required: true, min: 1, max: 100000 },
   riskLevel: enumField(['Low', 'Medium', 'High', 'Critical'], 'High'),
 });
 export const Alert = model(
@@ -145,6 +172,7 @@ export const Alert = model(
     resolvedBy: ref('User', false),
     resolvedAt: Date,
     lastDetectedAt: Date,
+    escalatedAt: Date,
   },
   [
     [

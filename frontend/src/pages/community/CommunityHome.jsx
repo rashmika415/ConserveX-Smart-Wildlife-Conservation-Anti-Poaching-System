@@ -22,10 +22,11 @@ export default function CommunityHome() {
             No account needed · A few minutes can make a difference
           </span>
         </div>
-        <div className="landscape" aria-hidden="true">
-          <div className="sun" />
-          <div className="hill hill-back" />
-          <div className="hill hill-front" />
+        <div className="landscape">
+          <img
+            src="/images/yala-elephants-hero.png"
+            alt="A family of elephants walking through Yala National Park"
+          />
           <div className="landscape-label">
             <MapPin size={16} /> Yala National Park, Sri Lanka
           </div>

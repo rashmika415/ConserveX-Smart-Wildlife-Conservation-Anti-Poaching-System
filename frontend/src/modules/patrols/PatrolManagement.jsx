@@ -18,7 +18,7 @@ export default function PatrolManagement() {
   const { user } = useAuth();
   const resource = useResource('/patrols');
   return (
-    <>
+    <div className="patrol-workspace">
       <PageHeader
         eyebrow="PATROL MANAGEMENT"
         title={user.role === 'MANAGER' ? 'Patrol operations' : 'My patrols'}
@@ -32,7 +32,7 @@ export default function PatrolManagement() {
         )}
       </PageHeader>
       <ResourceState resource={resource}>
-        <div className="card-grid">
+        <div className="card-grid patrol-list-grid">
           {resource.data?.map((patrol) => (
             <Link
               to={`/app/patrols/${patrol._id}`}
@@ -52,6 +52,8 @@ export default function PatrolManagement() {
                 <dd>{patrol.rangerId?.name}</dd>
                 <dt>Scheduled</dt>
                 <dd>{formatDate(patrol.scheduledDate)}</dd>
+                <dt>Scheduled end</dt>
+                <dd>{formatDate(patrol.scheduledEndTime)}</dd>
                 <dt>Checkpoints</dt>
                 <dd>{patrol.checkpoints.length}</dd>
               </dl>
@@ -65,7 +67,7 @@ export default function PatrolManagement() {
           <EmptyState message="No patrols have been assigned yet." />
         )}
       </ResourceState>
-    </>
+    </div>
   );
 }
 export function CreatePatrol() {
@@ -76,6 +78,7 @@ export function CreatePatrol() {
     parkName: 'Yala National Park',
     rangerId: '',
     scheduledDate: '',
+    scheduledEndTime: '',
   });
   const [checkpoints, setCheckpoints] = useState([
     { name: '', latitude: '', longitude: '' },
@@ -94,6 +97,7 @@ export function CreatePatrol() {
       const { data } = await api.post('/patrols', {
         ...values,
         scheduledDate: new Date(values.scheduledDate).toISOString(),
+        scheduledEndTime: new Date(values.scheduledEndTime).toISOString(),
         checkpoints,
       });
       navigate(`/app/patrols/${data.data._id}`);
@@ -104,7 +108,7 @@ export function CreatePatrol() {
     }
   }
   return (
-    <>
+    <div className="patrol-workspace">
       <PageHeader
         title="Create & assign patrol"
         description="Plan a route, set checkpoints and assign a ranger."
@@ -126,10 +130,17 @@ export function CreatePatrol() {
               {...field('parkName')}
             />
             <FormInput
-              label="Scheduled date and time"
+              label="Scheduled start time"
               type="datetime-local"
               required
               {...field('scheduledDate')}
+            />
+            <FormInput
+              label="Scheduled end time"
+              type="datetime-local"
+              required
+              min={values.scheduledDate || undefined}
+              {...field('scheduledEndTime')}
             />
             <FormInput
               label="Assign ranger"
@@ -205,6 +216,6 @@ export function CreatePatrol() {
           </div>
         </form>
       </ResourceState>
-    </>
+    </div>
   );
 }

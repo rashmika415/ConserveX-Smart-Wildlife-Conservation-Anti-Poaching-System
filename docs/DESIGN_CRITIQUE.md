@@ -11,7 +11,7 @@ The four substantial use cases remain in one integrated React / Express / MongoD
 7. **Standardized navigation:** a shared role-aware sidebar becomes a hamburger menu on mobile. Public reporting remains accessible without authentication.
 8. **Validation and feedback:** required inputs, bounded coordinates, positive integer herd counts, photo type/size checks, API errors, loading states, empty states and confirmations replace ambiguous outcomes.
 9. **Enforced authorization:** JWT authentication, database-backed roles and server-side ranger ownership checks enforce access beyond navigation visibility. Public responses contain a receipt, not contact details.
-10. **Duplicate alerts:** a partial unique database index allows only one open alert per animal/zone. Repeat readings update its location/time without discarding acknowledgement. Resolved alerts remain as history; later entry can create another alert.
+10. **Duplicate alerts:** a partial unique database index allows only one open alert per animal/zone. Repeat readings update its location/time without discarding acknowledgement. Resolving an alert while the animal remains inside the zone does not create a new alert; an outside reading followed by re-entry can create one. Resolved alerts remain as history.
 11. **Patrol integrity:** transitions are conditional database updates. Only one patrol can be Active per ranger; early termination requires a predefined reason. Exact-time assignment conflicts are checked. Schedule duration/overlap planning is outside scope because planned end times are not supplied.
 12. **Response traceability:** community responses store the officer and time. Selecting “Dispatch Ranger” or “Notify Nearby Community” records an action; it does not automatically assign a patrol, send SMS, or notify external services.
 13. **Map honesty:** a schematic location card displays exact coordinates and zone radius. It is explicitly not to scale and is not a navigational map.
@@ -22,7 +22,7 @@ The four substantial use cases remain in one integrated React / Express / MongoD
 - MongoDB and the API must be available for login and all saved operations.
 - Local uploads require persistent disk when hosted; uploaded URLs are accessible to anyone who knows the URL. The public reporting API itself does not expose private report details.
 - Sessions expire after eight hours. Tokens are stored in browser session storage and are cleared on logout. There is no central token revocation or refresh-token service.
-- The simulator uses artificial safe coordinates (0, 0), outside all seeded zones. They are test coordinates, not plausible Sri Lankan animal movement.
+- Safe simulation selects artificial coordinates on the backend, checking the current High/Critical zones with the same distance calculation used for detection. It tries (0, 0), then a bounded global grid; if no candidate is safe it returns an error without saving a reading. These are test coordinates, not plausible Sri Lankan animal movement.
 - Dashboard alerts refresh every 30 seconds, rather than using push notifications.
-- Community duplicate detection and automatic escalation are intentionally not claimed.
+- Community duplicate detection is not implemented. Unacknowledged collar alerts are flagged in-app after a configurable deadline (15 minutes by default), checked every 30 seconds and on alert reads. Escalation retains an audit timestamp without changing the zone priority or acknowledgement/resolution lifecycle. This implements Member Two's overdue-response flow; it does not contact external services.
 - This is production-style assignment software, not a deployed emergency response service.

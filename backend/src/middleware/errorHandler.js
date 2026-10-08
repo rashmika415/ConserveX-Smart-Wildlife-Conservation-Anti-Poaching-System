@@ -27,5 +27,11 @@ export function errorHandler(error, _req, res, _next) {
     console.error(error.name, error.message);
     message = 'The server could not complete the request. Please try again.';
   }
-  res.status(status).json({ success: false, message, data: null });
+  res
+    .status(status)
+    .json({
+      success: false,
+      message,
+      data: status < 500 ? error.data || null : null,
+    });
 }

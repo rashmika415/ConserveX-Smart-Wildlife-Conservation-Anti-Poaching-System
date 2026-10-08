@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useResource } from '../../hooks/useResource';
-import { api, multipart, errorMessage } from '../../services/api';
+import { useOfflinePatrol } from '../../hooks/useOfflinePatrol';
+import {
+  saveWaypoint,
+  syncWaypoints,
+  listWaypoints,
+} from '../../services/offlineWaypoints';
+import { api, errorMessage } from '../../services/api';
 import {
   PageHeader,
   ResourceState,
@@ -19,7 +24,7 @@ import {
 export default function ActivePatrol() {
   const { id } = useParams();
   const { user } = useAuth();
-  const resource = useResource(`/patrols/${id}`);
+  const resource = useOfflinePatrol(id, user._id);
   const initial = {
     latitude: '',
     longitude: '',
@@ -30,15 +35,30 @@ export default function ActivePatrol() {
   const [values, setValues] = useState(initial);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [activePatrolId, setActivePatrolId] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [endOptionsOpen, setEndOptionsOpen] = useState(false);
   const [endStatus, setEndStatus] = useState('Completed');
   const [reason, setReason] = useState('');
+  const [reasonDetails, setReasonDetails] = useState('');
   const [confirm, setConfirm] = useState(false);
   const [formKey, setFormKey] = useState(0);
   async function action(path, body, method = 'patch') {
     setBusy(true);
     setError('');
+    setActivePatrolId(null);
     try {
+      if (path === 'end') {
+        await syncWaypoints(user._id);
+        if (
+          (await listWaypoints(user._id, id)).some(
+            (point) => point.syncStatus === 'PENDING',
+          )
+        )
+          throw new Error(
+            'Sync all pending waypoints before ending this patrol.',
+          );
+      }
       const { data } = await api[method](`/patrols/${id}/${path}`, body);
       setSuccess(data.message);
       resource.reload();
@@ -48,15 +68,59 @@ export default function ActivePatrol() {
         setFormKey((k) => k + 1);
       }
     } catch (error) {
-      setError(errorMessage(error));
+      setError(
+        error.response
+          ? errorMessage(error)
+          : error.message || errorMessage(error),
+      );
+      setActivePatrolId(error.response?.data?.data?.activePatrolId || null);
       setConfirm(false);
     } finally {
       setBusy(false);
     }
   }
+  async function recordWaypoint() {
+    setBusy(true);
+    setError('');
+    try {
+      await saveWaypoint(user._id, id, values);
+      setValues(initial);
+      setFormKey((key) => key + 1);
+      setSuccess(
+        'Waypoint saved locally. Pending waypoints upload automatically when connected.',
+      );
+      await syncWaypoints(user._id);
+    } catch (error) {
+      setError(
+        error.message ||
+          'Could not save locally. Keep this form open and try again.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   const patrol = resource.data;
+  const pending = resource.points.filter(
+    (point) => point.syncStatus === 'PENDING',
+  );
+  const waypoints = [
+    ...(patrol?.waypoints || []),
+    ...resource.points
+      .filter(
+        (point) =>
+          point.syncStatus === 'PENDING' ||
+          !(patrol?.waypoints || []).some(
+            (saved) => saved.clientId === point.clientId,
+          ),
+      )
+      .map((point) => ({
+        ...point,
+        _id: point.clientId,
+        location: { latitude: point.latitude, longitude: point.longitude },
+      })),
+  ];
   return (
-    <>
+    <div className="patrol-workspace">
       <PageHeader
         title={patrol?.routeName || 'Patrol details'}
         description={patrol?.parkName}
@@ -66,6 +130,16 @@ export default function ActivePatrol() {
         </Link>
       </PageHeader>
       <Feedback error={error} success={success} />
+      {activePatrolId && (
+        <div className="button-row" style={{ marginTop: 0, marginBottom: 16 }}>
+          <Link
+            className="button secondary"
+            to={`/app/patrols/${activePatrolId}`}
+          >
+            Open active patrol to finish it
+          </Link>
+        </div>
+      )}
       <ResourceState resource={resource}>
         {patrol && (
           <>
@@ -80,6 +154,8 @@ export default function ActivePatrol() {
                   <dd>{patrol.rangerId?.name}</dd>
                   <dt>Scheduled</dt>
                   <dd>{formatDate(patrol.scheduledDate)}</dd>
+                  <dt>Scheduled end</dt>
+                  <dd>{formatDate(patrol.scheduledEndTime)}</dd>
                   <dt>Started</dt>
                   <dd>{formatDate(patrol.startTime)}</dd>
                   <dt>Ended</dt>
@@ -90,12 +166,6 @@ export default function ActivePatrol() {
                       <dd>{patrol.durationMinutes} minutes</dd>
                       <dt>Waypoints recorded</dt>
                       <dd>{patrol.waypoints.length}</dd>
-                    </>
-                  )}
-                  {patrol.incompleteReason && (
-                    <>
-                      <dt>Ended early</dt>
-                      <dd>{patrol.incompleteReason}</dd>
                     </>
                   )}
                 </dl>
@@ -117,19 +187,45 @@ export default function ActivePatrol() {
                   </Link>
                 )}
               </section>
-              <section className="panel">
-                <h2>Route checkpoints</h2>
-                <ol className="checkpoint-list">
-                  {patrol.checkpoints.map((point, index) => (
-                    <li key={point._id || index}>
-                      <strong>{point.name}</strong>
-                      <span>
-                        {point.location.latitude}, {point.location.longitude}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </section>
+              <div className="patrol-side-panels">
+                {patrol.status === 'Incomplete' && (
+                  <section
+                    className="panel patrol-termination-panel"
+                    aria-labelledby="early-termination-heading"
+                  >
+                    <span className="patrol-termination-label">
+                      Patrol ended early
+                    </span>
+                    <h2 id="early-termination-heading">Early termination</h2>
+                    <dl className="details">
+                      <dt>Reason</dt>
+                      <dd>{patrol.incompleteReason || 'No reason recorded'}</dd>
+                      {patrol.incompleteReason === 'Other' &&
+                        patrol.incompleteReasonDetails && (
+                          <>
+                            <dt>Explanation</dt>
+                            <dd>{patrol.incompleteReasonDetails}</dd>
+                          </>
+                        )}
+                      <dt>Ended</dt>
+                      <dd>{formatDate(patrol.endTime)}</dd>
+                    </dl>
+                  </section>
+                )}
+                <section className="panel">
+                  <h2>Route checkpoints</h2>
+                  <ol className="checkpoint-list">
+                    {patrol.checkpoints.map((point, index) => (
+                      <li key={point._id || index}>
+                        <strong>{point.name}</strong>
+                        <span>
+                          {point.location.latitude}, {point.location.longitude}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              </div>
             </div>
             {user.role === 'RANGER' && patrol.status === 'Active' && (
               <div className="detail-grid section-gap">
@@ -138,7 +234,7 @@ export default function ActivePatrol() {
                   key={formKey}
                   onSubmit={(event) => {
                     event.preventDefault();
-                    action('waypoints', multipart(values), 'post');
+                    recordWaypoint();
                   }}
                 >
                   <h2>Record waypoint</h2>
@@ -176,6 +272,28 @@ export default function ActivePatrol() {
                   className="panel form-panel align-start"
                   onSubmit={(event) => {
                     event.preventDefault();
+                    if (endStatus === 'Incomplete') {
+                      const form = event.currentTarget;
+                      const reasonField =
+                        form.elements.namedItem('incompleteReason');
+                      const detailsField = form.elements.namedItem(
+                        'incompleteReasonDetails',
+                      );
+                      reasonField.setCustomValidity(
+                        reason
+                          ? ''
+                          : 'Please fill this field: select a reason for ending early.',
+                      );
+                      if (detailsField) {
+                        detailsField.setCustomValidity(
+                          reasonDetails.trim()
+                            ? ''
+                            : 'Please fill this field: describe the reason for ending early.',
+                        );
+                      }
+                      if (!form.reportValidity()) return;
+                    }
+                    setError('');
                     setConfirm(true);
                   }}
                 >
@@ -183,51 +301,148 @@ export default function ActivePatrol() {
                   <p className="muted">
                     Ending a patrol saves its duration and final summary.
                   </p>
-                  <FormInput
-                    label="Outcome"
-                    value={endStatus}
-                    onChange={(e) => setEndStatus(e.target.value)}
-                    options={['Completed', 'Incomplete']}
-                  />
-                  {endStatus === 'Incomplete' && (
-                    <FormInput
-                      label="Reason for ending early"
-                      required
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      options={[
-                        '',
-                        'Weather',
-                        'Injury',
-                        'Hazard',
-                        'Called Back',
-                        'Other',
-                      ]}
-                    />
-                  )}
-                  <button className="button" disabled={busy}>
+                  <button
+                    type="button"
+                    className="button"
+                    disabled={busy}
+                    aria-expanded={endOptionsOpen}
+                    aria-controls="patrol-end-options"
+                    onClick={() => {
+                      setEndOptionsOpen((open) => !open);
+                      setEndStatus('Completed');
+                      setReason('');
+                    }}
+                  >
                     End Patrol
                   </button>
+                  {endOptionsOpen && (
+                    <div id="patrol-end-options" className="button-row">
+                      <button
+                        type="button"
+                        className="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setEndStatus('Completed');
+                          setReason('');
+                          setConfirm(true);
+                        }}
+                      >
+                        Complete Patrol
+                      </button>
+                      <button
+                        type="button"
+                        className="button secondary"
+                        disabled={busy}
+                        onClick={() => setEndStatus('Incomplete')}
+                      >
+                        Terminate Early
+                      </button>
+                    </div>
+                  )}
+                  {endOptionsOpen && endStatus === 'Incomplete' && (
+                    <>
+                      <FormInput
+                        label="Reason for ending early"
+                        required
+                        name="incompleteReason"
+                        value={reason}
+                        onInvalid={(e) =>
+                          e.target.setCustomValidity(
+                            'Please fill this field: select a reason for ending early.',
+                          )
+                        }
+                        onChange={(e) => {
+                          e.target.setCustomValidity('');
+                          setReason(e.target.value);
+                        }}
+                        options={[
+                          '',
+                          'Medical Emergency',
+                          'Vehicle Breakdown',
+                          'Severe Weather',
+                          'Unsafe Conditions',
+                          'Blocked or Inaccessible Route',
+                          'Wildlife Threat',
+                          'Equipment Failure',
+                          'Communication Failure',
+                          'Emergency Reassignment',
+                          'Security Threat',
+                          'Insufficient Resources',
+                          'Other',
+                        ]}
+                      />
+                      {reason === 'Other' && (
+                        <FormInput
+                          label="Describe the reason for ending early"
+                          multiline
+                          required
+                          maxLength={2000}
+                          name="incompleteReasonDetails"
+                          value={reasonDetails}
+                          onInvalid={(e) =>
+                            e.target.setCustomValidity(
+                              'Please fill this field: describe the reason for ending early.',
+                            )
+                          }
+                          onChange={(e) => {
+                            e.target.setCustomValidity(
+                              e.target.value.trim()
+                                ? ''
+                                : 'Please fill this field: describe the reason for ending early.',
+                            );
+                            setReasonDetails(e.target.value);
+                          }}
+                        />
+                      )}
+                      <button className="button" disabled={busy}>
+                        Confirm early termination
+                      </button>
+                    </>
+                  )}
                 </form>
               </div>
             )}
-            <section className="panel section-gap">
+            <section className="panel section-gap patrol-summary">
+              <p role="status" className="patrol-sync-status">
+                {pending.length
+                  ? `${pending.length} waypoint(s) PENDING sync`
+                  : 'All waypoints SYNCED'}
+              </p>
+              {pending.length > 0 && (
+                <button
+                  className="button secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    syncWaypoints(user._id).catch((error) =>
+                      setError(error.message),
+                    )
+                  }
+                >
+                  Retry sync
+                </button>
+              )}
               <h2>
                 {patrol.endTime
                   ? 'Patrol summary · recorded waypoints'
                   : 'Waypoint activity'}
               </h2>
-              {patrol.waypoints.length === 0 ? (
+              {waypoints.length === 0 ? (
                 <p className="muted">No waypoints recorded yet.</p>
               ) : (
-                <div className="card-grid">
-                  {patrol.waypoints.map((point) => (
+                <div className="card-grid patrol-waypoint-grid">
+                  {waypoints.map((point) => (
                     <article className="waypoint" key={point._id}>
                       <div className="section-heading">
-                        <strong>{point.type}</strong>
+                        <strong>
+                          {point.type}{' '}
+                          <span className="badge">
+                            {point.syncStatus || 'SYNCED'}
+                          </span>
+                        </strong>
                         <small>{formatDate(point.recordedAt)}</small>
                       </div>
                       <p>{point.description || 'No note added.'}</p>
+                      {point.syncError && <p role="alert">{point.syncError}</p>}
                       <LocationMap location={point.location} />
                       <Photo path={point.imageUrl} />
                     </article>
@@ -245,10 +460,16 @@ export default function ActivePatrol() {
           busy={busy}
           onCancel={() => setConfirm(false)}
           onConfirm={() =>
-            action('end', { status: endStatus, incompleteReason: reason })
+            action('end', {
+              status: endStatus,
+              incompleteReason: reason,
+              ...(endStatus === 'Incomplete' && reason === 'Other'
+                ? { incompleteReasonDetails: reasonDetails.trim() }
+                : {}),
+            })
           }
         />
       )}
-    </>
+    </div>
   );
 }

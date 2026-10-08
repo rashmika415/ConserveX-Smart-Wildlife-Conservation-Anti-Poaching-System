@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   MapPin,
   LocateFixed,
@@ -40,11 +40,22 @@ export function PageHeader({
   );
 }
 export function StatusBadge({ status }) {
+  const labels = {
+    DRAFT: 'Draft',
+    SAVED_OFFLINE: 'Saved locally',
+    PENDING_SYNC: 'Pending sync',
+    SYNCED: 'Synced',
+  };
   return (
     <span
       className={`badge badge-${String(status).toLowerCase().replaceAll(' ', '-')}`}
     >
-      {status === 'Pending' ? 'Pending Sync' : status}
+      {labels[status] ||
+        (status === 'Pending'
+          ? 'Pending Sync'
+          : status === 'Incomplete'
+            ? 'Terminated'
+            : status)}
     </span>
   );
 }
@@ -208,7 +219,11 @@ export function LocationInput({
         (position) => {
           const lat = position.coords.latitude.toFixed(6);
           const lng = position.coords.longitude.toFixed(6);
-          updateCoords(lat, lng, '✓ Current coordinates captured from your device.');
+          updateCoords(
+            lat,
+            lng,
+            '✓ Current coordinates captured from your device.',
+          );
           setBusy(false);
         },
         (geoError) => {
@@ -307,7 +322,7 @@ export function LocationInput({
           onClick={() => setShowMap((prev) => !prev)}
         >
           <MapPin size={16} />
-          {showMap ? 'Hide map' : 'Pick on schematic map'}
+          {showMap ? 'Hide map' : 'Open interactive map'}
         </button>
       </div>
 
@@ -327,7 +342,9 @@ export function LocationInput({
             <span className="place-title">
               <MapPin size={15} />
               <strong>
-                {detectedPlace.areaTitle || detectedPlace.town || 'Detected Area'}
+                {detectedPlace.areaTitle ||
+                  detectedPlace.town ||
+                  'Detected Area'}
               </strong>
             </span>
             {detectedPlace.province && (
@@ -357,7 +374,11 @@ export function LocationInput({
         <span className="preset-label">Quick wildlife sighting presets:</span>
         <div className="preset-buttons">
           {[
-            { label: 'Palatupana Water Tank', lat: '6.372500', lng: '81.520400' },
+            {
+              label: 'Palatupana Water Tank',
+              lat: '6.372500',
+              lng: '81.520400',
+            },
             { label: 'Yala Menik River', lat: '6.450000', lng: '81.400000' },
             { label: 'Udawalawe Border', lat: '6.474600', lng: '80.884500' },
             { label: 'Minneriya Corridor', lat: '8.032400', lng: '80.825600' },
@@ -406,7 +427,7 @@ export function LocationInput({
               </button>
             )}
           </div>
-          <LocationMap
+          <InteractiveLocationPicker
             location={
               hasCoords
                 ? {
@@ -415,7 +436,6 @@ export function LocationInput({
                   }
                 : null
             }
-            interactive
             onSelectLocation={(lat, lng) => {
               updateCoords(lat, lng, `✓ Pin placed at ${lat}, ${lng}`);
             }}
@@ -424,13 +444,113 @@ export function LocationInput({
             className="muted"
             style={{ display: 'block', marginTop: '6px' }}
           >
-            Tip: You can click anywhere on the map to set or move the GPS coordinates pin.
+            Tip: Click the map to set or move the incident pin. You can zoom and
+            drag to confirm the exact field location.
           </small>
         </div>
       )}
     </fieldset>
   );
 }
+
+function InteractiveLocationPicker({ location, onSelectLocation }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markerRef = useRef(null);
+  const leafletRef = useRef(null);
+  const locationRef = useRef(location);
+  const selectRef = useRef(onSelectLocation);
+  locationRef.current = location;
+  selectRef.current = onSelectLocation;
+
+  function validPoint(point) {
+    const latitude = Number(point?.latitude);
+    const longitude = Number(point?.longitude);
+    return Number.isFinite(latitude) && Number.isFinite(longitude)
+      ? [latitude, longitude]
+      : null;
+  }
+
+  function showMarker(point, center = false) {
+    const coordinates = validPoint(point);
+    const map = mapRef.current;
+    const L = leafletRef.current;
+    if (!map || !L) return;
+    if (!coordinates) {
+      if (markerRef.current) markerRef.current.remove();
+      markerRef.current = null;
+      return;
+    }
+    if (!markerRef.current) {
+      markerRef.current = L.marker(coordinates, {
+        icon: L.divIcon({
+          className: 'incident-map-marker',
+          html: '<span aria-hidden="true"></span>',
+          iconSize: [28, 36],
+          iconAnchor: [14, 34],
+        }),
+      }).addTo(map);
+    } else markerRef.current.setLatLng(coordinates);
+    markerRef.current.bindTooltip('Incident location', {
+      direction: 'top',
+      offset: [0, -28],
+    });
+    if (center) map.setView(coordinates, Math.max(map.getZoom(), 15));
+  }
+
+  useEffect(() => {
+    let disposed = false;
+    import('leaflet').then(({ default: L }) => {
+      if (disposed || !containerRef.current) return;
+      leafletRef.current = L;
+      const initial = validPoint(locationRef.current);
+      const map = L.map(containerRef.current, {
+        zoomControl: true,
+        attributionControl: true,
+      }).setView(initial || [7.8731, 80.7718], initial ? 15 : 7);
+      mapRef.current = map;
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+      L.control.scale({ imperial: false }).addTo(map);
+      map.on('click', ({ latlng }) => {
+        const latitude = latlng.lat.toFixed(6);
+        const longitude = latlng.lng.toFixed(6);
+        showMarker({ latitude, longitude });
+        selectRef.current?.(latitude, longitude);
+      });
+      if (initial) showMarker(locationRef.current);
+      requestAnimationFrame(() => map.invalidateSize());
+    });
+    return () => {
+      disposed = true;
+      if (mapRef.current) mapRef.current.remove();
+      mapRef.current = null;
+      markerRef.current = null;
+      leafletRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    showMarker(location, true);
+  }, [location?.latitude, location?.longitude]);
+
+  return (
+    <div className="interactive-location-map-shell">
+      <div
+        ref={containerRef}
+        className="interactive-location-map"
+        aria-label="Interactive incident location map"
+      />
+      <div className="map-offline-hint">
+        Map tiles require connectivity. Pin selection and manual coordinates
+        continue to work offline.
+      </div>
+    </div>
+  );
+}
+
 export function LocationMap({
   location,
   zone,
@@ -445,7 +565,7 @@ export function LocationMap({
     );
 
   const lat = location ? Number(location.latitude) : 6.45;
-  const lng = location ? Number(location.longitude) : 81.40;
+  const lng = location ? Number(location.longitude) : 81.4;
   let leftPercent = 50;
   let topPercent = 38;
   if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
@@ -499,7 +619,8 @@ export function LocationMap({
               {zone
                 ? `${zone.zoneName} · radius ${zone.radius} m`
                 : 'Location reference'}{' '}
-              · schematic{interactive ? ' (click to reposition)' : ', not to scale'}
+              · schematic
+              {interactive ? ' (click to reposition)' : ', not to scale'}
             </span>
           </>
         ) : (
