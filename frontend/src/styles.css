@@ -684,6 +684,9 @@ small {
   background: #f0fdf4;
   border-color: #bbf7d0;
 }
+.badge-resolved.badge-with-icon::before {
+  display: none;
+}
 .badge-community {
   color: #0f766e;
   background: #f0fdfa;

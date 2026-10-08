@@ -13,13 +13,24 @@ import {
   LocationMap,
   Photo,
 } from '../../components/UI';
-import { FileDown, Download } from 'lucide-react';
+import { FileDown, Download, Check } from 'lucide-react';
 import {
   exportAllReportsPDF,
   exportAllReportsCSV,
   exportSingleReportPDF,
 } from '../../services/pdfExport';
 const statuses = ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'];
+
+function CommunityStatusBadge({ status }) {
+  if (status === 'Resolved') {
+    return (
+      <span className="badge badge-resolved badge-with-icon">
+        <Check size={12} strokeWidth={2.5} aria-hidden="true" /> Resolved
+      </span>
+    );
+  }
+  return <StatusBadge status={status} />;
+}
 export default function CommunityReports() {
   const resource = useResource('/community-reports');
   const [filter, setFilter] = useState('All');
@@ -86,7 +97,7 @@ export default function CommunityReports() {
                       response actions
                     </small>
                   </div>
-                  <StatusBadge status={item.status} />
+                  <CommunityStatusBadge status={item.status} />
                 </Link>
               ))}
             </div>
@@ -190,7 +201,7 @@ export function CommunityReportDetails() {
               <section className="panel">
                 <div className="section-heading">
                   <h2>{report.landmark}</h2>
-                  <StatusBadge status={report.status} />
+                  <CommunityStatusBadge status={report.status} />
                 </div>
                 <dl className="details">
                   <dt>Elephants</dt>
