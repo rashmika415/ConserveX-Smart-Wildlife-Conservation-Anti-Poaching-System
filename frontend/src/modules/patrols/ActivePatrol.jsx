@@ -113,7 +113,7 @@ export default function ActivePatrol() {
       })),
   ];
   return (
-    <>
+    <div className="patrol-workspace">
       <PageHeader
         title={patrol?.routeName || 'Patrol details'}
         description={patrol?.parkName}
@@ -385,8 +385,8 @@ export default function ActivePatrol() {
                 </form>
               </div>
             )}
-            <section className="panel section-gap">
-              <p role="status">
+            <section className="panel section-gap patrol-summary">
+              <p role="status" className="patrol-sync-status">
                 {pending.length
                   ? `${pending.length} waypoint(s) PENDING sync`
                   : 'All waypoints SYNCED'}
@@ -412,7 +412,7 @@ export default function ActivePatrol() {
               {waypoints.length === 0 ? (
                 <p className="muted">No waypoints recorded yet.</p>
               ) : (
-                <div className="card-grid">
+                <div className="card-grid patrol-waypoint-grid">
                   {waypoints.map((point) => (
                     <article className="waypoint" key={point._id}>
                       <div className="section-heading">
@@ -453,6 +453,6 @@ export default function ActivePatrol() {
           }
         />
       )}
-    </>
+    </div>
   );
 }
