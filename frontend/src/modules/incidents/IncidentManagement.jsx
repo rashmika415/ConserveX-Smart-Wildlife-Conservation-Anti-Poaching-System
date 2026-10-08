@@ -12,7 +12,7 @@ import {
   formatDate,
   FormInput,
   Feedback,
-  LocationMap,
+  LeafletLocationMap,
   Photo,
 } from '../../components/UI';
 export default function IncidentManagement() {
@@ -186,7 +186,10 @@ export function IncidentDetails() {
                 </form>
               )}
             </section>
-            <LocationMap location={item.location} />
+            <LeafletLocationMap
+              location={item.location}
+              className="incident-detail-map"
+            />
           </div>
         )}
       </ResourceState>

@@ -427,7 +427,7 @@ export function LocationInput({
               </button>
             )}
           </div>
-          <InteractiveLocationPicker
+          <LeafletLocationMap
             location={
               hasCoords
                 ? {
@@ -453,7 +453,11 @@ export function LocationInput({
   );
 }
 
-function InteractiveLocationPicker({ location, onSelectLocation }) {
+export function LeafletLocationMap({
+  location,
+  onSelectLocation,
+  className = '',
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markerRef = useRef(null);
@@ -514,12 +518,13 @@ function InteractiveLocationPicker({ location, onSelectLocation }) {
         attribution: '&copy; OpenStreetMap contributors',
       }).addTo(map);
       L.control.scale({ imperial: false }).addTo(map);
-      map.on('click', ({ latlng }) => {
-        const latitude = latlng.lat.toFixed(6);
-        const longitude = latlng.lng.toFixed(6);
-        showMarker({ latitude, longitude });
-        selectRef.current?.(latitude, longitude);
-      });
+      if (selectRef.current)
+        map.on('click', ({ latlng }) => {
+          const latitude = latlng.lat.toFixed(6);
+          const longitude = latlng.lng.toFixed(6);
+          showMarker({ latitude, longitude });
+          selectRef.current?.(latitude, longitude);
+        });
       if (initial) showMarker(locationRef.current);
       requestAnimationFrame(() => map.invalidateSize());
     });
@@ -537,16 +542,41 @@ function InteractiveLocationPicker({ location, onSelectLocation }) {
   }, [location?.latitude, location?.longitude]);
 
   return (
-    <div className="interactive-location-map-shell">
+    <div className={`interactive-location-map-shell ${className}`}>
       <div
         ref={containerRef}
         className="interactive-location-map"
-        aria-label="Interactive incident location map"
+        aria-label={
+          onSelectLocation
+            ? 'Interactive incident location picker'
+            : 'Incident location map'
+        }
       />
-      <div className="map-offline-hint">
-        Map tiles require connectivity. Pin selection and manual coordinates
-        continue to work offline.
-      </div>
+      {onSelectLocation ? (
+        <div className="map-offline-hint">
+          Map tiles require connectivity. Pin selection and manual coordinates
+          continue to work offline.
+        </div>
+      ) : (
+        location && (
+          <div className="map-location-footer">
+            <div>
+              <span>INCIDENT COORDINATES</span>
+              <strong>
+                {Number(location.latitude).toFixed(6)},{' '}
+                {Number(location.longitude).toFixed(6)}
+              </strong>
+            </div>
+            <a
+              href={`https://www.openstreetmap.org/?mlat=${location.latitude}&mlon=${location.longitude}#map=16/${location.latitude}/${location.longitude}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open full map ↗
+            </a>
+          </div>
+        )
+      )}
     </div>
   );
 }
