@@ -7,6 +7,9 @@ import {
 } from '../models/index.js';
 import { ApiError, requireRecord } from '../utils/apiError.js';
 import { text, location, number, choice } from '../utils/validation.js';
+import { distanceMeters } from '../utils/geography.js';
+import { safeTestLocation } from './collarSimulator.js';
+export { distanceMeters } from '../utils/geography.js';
 export async function createRiskZone(body) {
   const point = location({
     latitude: body.centerLatitude,
@@ -21,18 +24,13 @@ export async function createRiskZone(body) {
     riskLevel: choice(body.riskLevel, ['High', 'Critical'], 'risk level'),
   });
 }
-export function distanceMeters(lat1, lon1, lat2, lon2) {
-  const rad = (value) => (value * Math.PI) / 180;
-  const a =
-    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
-    Math.cos(rad(lat1)) *
-      Math.cos(rad(lat2)) *
-      Math.sin(rad(lon2 - lon1) / 2) ** 2;
-  return 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
-}
 export async function recordReading(body) {
   const collarId = text(body.collarId, 'Collar ID', true, 60);
-  const point = location(body);
+  const simulation =
+    body.simulation === undefined
+      ? undefined
+      : choice(body.simulation, ['safe'], 'simulation mode');
+  let point = simulation ? undefined : location(body);
   const collar = requireRecord(await Collar.findOne({ collarId }), 'Collar');
   if (collar.status !== 'Active')
     throw new ApiError(409, 'This collar is inactive');
@@ -40,15 +38,16 @@ export async function recordReading(body) {
     await Animal.findById(collar.animalId),
     'Animal',
   );
+  const zones = await RiskZone.find({
+    riskLevel: { $in: ['High', 'Critical'] },
+  });
+  if (simulation) point = safeTestLocation(zones);
   const timestamp = new Date();
   const reading = await CollarReading.create({
     collarId,
     animalId: animal._id,
     ...point,
     timestamp,
-  });
-  const zones = await RiskZone.find({
-    riskLevel: { $in: ['High', 'Critical'] },
   });
   const alerts = [];
   let insideRiskZone = false;

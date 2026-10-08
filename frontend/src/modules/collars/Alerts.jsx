@@ -24,7 +24,9 @@ export default function Alerts() {
         filter === 'All' ||
         (filter === 'Open'
           ? item.status !== 'Resolved'
-          : item.status === filter),
+          : filter === 'Escalated'
+            ? item.status === 'New' && Boolean(item.escalatedAt)
+            : item.status === filter),
     ) || [];
   return (
     <>
@@ -38,7 +40,14 @@ export default function Alerts() {
           <h2>Alert centre</h2>
           <FormInput
             label="Filter alerts"
-            options={['Open', 'All', 'New', 'Acknowledged', 'Resolved']}
+            options={[
+              'Open',
+              'All',
+              'New',
+              'Escalated',
+              'Acknowledged',
+              'Resolved',
+            ]}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
@@ -68,6 +77,9 @@ export default function Alerts() {
                   <div className="record-badges">
                     <StatusBadge status={alert.priority} />
                     <StatusBadge status={alert.status} />
+                    {alert.escalatedAt && alert.status === 'New' && (
+                      <StatusBadge status="Escalated" />
+                    )}
                   </div>
                 </Link>
               ))}
@@ -87,7 +99,7 @@ export default function Alerts() {
 export function AlertDetails() {
   const { id } = useParams();
   const { user } = useAuth();
-  const resource = useResource(`/alerts/${id}`);
+  const resource = useResource(`/alerts/${id}`, true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
@@ -125,6 +137,12 @@ export function AlertDetails() {
               </div>
               <h2>{alert.animalId?.tagName}</h2>
               <p>{alert.message}</p>
+              {alert.escalatedAt && alert.status === 'New' && (
+                <div className="feedback error" role="alert">
+                  Escalated: acknowledgement overdue. Ranger or CLO response
+                  required.
+                </div>
+              )}
               <dl className="details">
                 <dt>GPS collar</dt>
                 <dd>{alert.collarId}</dd>
@@ -134,6 +152,12 @@ export function AlertDetails() {
                 <dd>{formatDate(alert.createdAt)}</dd>
                 <dt>Last detected</dt>
                 <dd>{formatDate(alert.lastDetectedAt)}</dd>
+                {alert.escalatedAt && (
+                  <>
+                    <dt>Escalated at</dt>
+                    <dd>{formatDate(alert.escalatedAt)}</dd>
+                  </>
+                )}
                 <dt>Acknowledged by</dt>
                 <dd>{alert.acknowledgedBy?.name || 'Awaiting response'}</dd>
                 <dt>Acknowledged at</dt>

@@ -79,6 +79,7 @@ Incident.schema.index(
   },
 );
 const waypoint = new Schema({
+  clientId: String,
   location: { type: point, required: true },
   type: { type: String, required: true },
   description: String,
@@ -171,6 +172,7 @@ export const Alert = model(
     resolvedBy: ref('User', false),
     resolvedAt: Date,
     lastDetectedAt: Date,
+    escalatedAt: Date,
   },
   [
     [
