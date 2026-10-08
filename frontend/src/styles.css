@@ -1573,36 +1573,28 @@ th {
 .landscape {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(#6c8870, #a4b291);
+  background: #315642;
   min-height: 320px;
 }
-.sun {
-  width: 140px;
-  height: 140px;
+.landscape::after {
+  content: '';
   position: absolute;
-  left: 28%;
-  top: 65px;
-  background: #e5deb0;
-  border-radius: 50%;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 48%,
+    rgba(15, 43, 32, 0.18) 68%,
+    rgba(10, 34, 25, 0.72) 100%
+  );
+  pointer-events: none;
 }
-.hill {
+.landscape > img {
+  width: 100%;
+  height: 100%;
   position: absolute;
-  width: 150%;
-  height: 90%;
-  border-radius: 50% 60% 0 0;
-  transform: rotate(-14deg);
-  left: -20%;
-  bottom: -25%;
-  background: #375f45;
-}
-.hill-back {
-  background: #718659;
-  bottom: -5%;
-  left: 8%;
-  transform: rotate(30deg);
-}
-.hill-front {
-  background: linear-gradient(45deg, #193f32, #486b44);
+  inset: 0;
+  object-fit: cover;
+  object-position: 54% center;
 }
 .landscape-label {
   position: absolute;
@@ -1613,6 +1605,8 @@ th {
   gap: 7px;
   color: #dce6c9;
   font-size: 0.72rem;
+  z-index: 1;
+  text-shadow: 0 1px 4px #0a241b;
 }
 .public-intro {
   padding: 60px 6%;
@@ -1876,10 +1870,6 @@ th {
   .hero h1 {
     font-size: 2.8rem;
   }
-  .landscape .sun {
-    width: 100px;
-    height: 100px;
-  }
   .login-story h1 {
     font-size: 2.4rem;
   }
@@ -2082,11 +2072,8 @@ th {
   .landscape {
     min-height: 185px;
   }
-  .landscape .sun {
-    width: 90px;
-    height: 90px;
-    top: 15px;
-    left: 65%;
+  .landscape > img {
+    object-position: 58% 58%;
   }
   .landscape-label {
     bottom: 18px;
