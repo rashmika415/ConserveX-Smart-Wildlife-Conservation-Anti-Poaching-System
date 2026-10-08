@@ -50,6 +50,11 @@ apiRouter.post(
   ...upload,
   community.create,
 );
+apiRouter.post(
+  '/community-reports/sms',
+  limit(50, 'Too many submissions. Try again in 15 minutes'),
+  community.sms,
+);
 apiRouter.use(authenticate);
 apiRouter.get('/auth/me', auth.me);
 apiRouter.get('/users', manager, auth.users);
@@ -81,7 +86,11 @@ apiRouter.patch(
 );
 apiRouter.patch('/alerts/:id/resolve', manager, tracking.resolve);
 apiRouter.get('/community-reports/notifications', community.notifications);
-apiRouter.get('/community-reports', office, community.list);
+apiRouter.get(
+  '/community-reports',
+  authorize('MANAGER', 'LIAISON', 'RANGER'),
+  community.list,
+);
 apiRouter.get('/community-reports/:id', office, community.details);
 apiRouter.patch('/community-reports/:id/status', office, community.status);
 apiRouter.post('/community-reports/:id/response', office, community.respond);

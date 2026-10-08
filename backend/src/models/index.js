@@ -191,6 +191,8 @@ export const CommunityReport = model('CommunityReport', {
   contact: String,
   town: String,
   district: String,
+  reportType: { type: String, default: 'Elephant Sighting' },
+  corroborated: { type: Boolean, default: false },
   status: enumField(
     ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'],
     'New',

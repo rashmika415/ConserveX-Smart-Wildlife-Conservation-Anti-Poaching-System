@@ -67,8 +67,10 @@ export function App() {
               <Route path="patrols/new" element={<CreatePatrol />} />
               <Route path="tracking" element={<AnimalTracking />} />
             </Route>
-            <Route element={<Protected roles={['MANAGER', 'LIAISON']} />}>
+            <Route element={<Protected roles={['MANAGER', 'LIAISON', 'RANGER']} />}>
               <Route path="community" element={<CommunityReports />} />
+            </Route>
+            <Route element={<Protected roles={['MANAGER', 'LIAISON']} />}>
               <Route
                 path="community/:id"
                 element={<CommunityReportDetails />}
