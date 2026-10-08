@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useResource } from '../../hooks/useResource';
 import { api, errorMessage } from '../../services/api';
 import {
@@ -19,7 +19,10 @@ export default function CommunityReports() {
   const [filter, setFilter] = useState('All');
   const records =
     resource.data?.filter(
-      (item) => filter === 'All' || item.status === filter,
+      (item) =>
+        filter === 'All' ||
+        String(item.status).trim().toLowerCase() ===
+          filter.trim().toLowerCase(),
     ) || [];
   return (
     <>
@@ -74,33 +77,72 @@ export default function CommunityReports() {
 }
 export function CommunityReportDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const resource = useResource(`/community-reports/${id}`);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
   const [action, setAction] = useState('');
   const [notes, setNotes] = useState('');
-  async function save(path, body, method = 'patch') {
+  const report = resource.data;
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    if (report?.status) {
+      setStatus(report.status);
+    }
+  }, [report?.status]);
+
+  async function handleSaveStatus(e) {
+    e.preventDefault();
+    const targetStatus = status || report?.status;
+    if (!targetStatus) return;
     setBusy(true);
     setError('');
     try {
-      const { data } = await api[method](
-        `/community-reports/${id}/${path}`,
-        body,
-      );
-      setSuccess(data.message);
-      if (path === 'response') {
-        setAction('');
-        setNotes('');
+      await api.patch(`/community-reports/${id}/status`, {
+        status: targetStatus,
+        ...(action ? { action, notes } : {}),
+      });
+      if (action) {
+        await api.post(`/community-reports/${id}/response`, {
+          action,
+          notes,
+          status: targetStatus,
+        });
       }
-      resource.reload();
-    } catch (error) {
-      setError(errorMessage(error));
-    } finally {
+      navigate('/app/community');
+    } catch (err) {
+      setError(errorMessage(err));
       setBusy(false);
     }
   }
-  const report = resource.data;
+
+  async function handleRecordResponse(e) {
+    e.preventDefault();
+    if (!action) {
+      setError('Please choose a response action.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const targetStatus = status || report?.status;
+      await api.post(`/community-reports/${id}/response`, {
+        action,
+        notes,
+        ...(targetStatus ? { status: targetStatus } : {}),
+      });
+      if (targetStatus && targetStatus !== report?.status) {
+        await api.patch(`/community-reports/${id}/status`, {
+          status: targetStatus,
+        });
+      }
+      navigate('/app/community');
+    } catch (err) {
+      setError(errorMessage(err));
+      setBusy(false);
+    }
+  }
   return (
     <>
       <PageHeader title="Community report details">
@@ -108,7 +150,7 @@ export function CommunityReportDetails() {
           All reports
         </Link>
       </PageHeader>
-      <Feedback error={error} success={success} />
+      <Feedback error={error} />
       <ResourceState resource={resource}>
         {report && (
           <>
@@ -139,19 +181,12 @@ export function CommunityReportDetails() {
                 </dl>
                 <p>{report.description || 'No additional description.'}</p>
                 <Photo path={report.imageUrl} />
-                <form
-                  className="inline-form"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    save('status', {
-                      status: new FormData(e.currentTarget).get('status'),
-                    });
-                  }}
-                >
+                <form className="inline-form" onSubmit={handleSaveStatus}>
                   <FormInput
                     name="status"
                     label="Report status"
-                    defaultValue={report.status}
+                    value={status || report.status}
+                    onChange={(e) => setStatus(e.target.value)}
                     options={statuses}
                   />
                   <button className="button" disabled={busy}>
@@ -164,10 +199,7 @@ export function CommunityReportDetails() {
             <div className="detail-grid section-gap">
               <form
                 className="panel form-panel align-start"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  save('response', { action, notes }, 'post');
-                }}
+                onSubmit={handleRecordResponse}
               >
                 <h2>Record response action</h2>
                 <FormInput

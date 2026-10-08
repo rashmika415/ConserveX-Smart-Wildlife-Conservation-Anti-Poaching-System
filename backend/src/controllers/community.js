@@ -47,25 +47,35 @@ export const details = async (req, res) =>
       'Community report',
     ),
   );
-export const status = async (req, res) =>
-  success(
+export const status = async (req, res) => {
+  const statusValue = choice(
+    req.body.status,
+    ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'],
+    'report status',
+  );
+  const update = { status: statusValue };
+  if (req.body.action) {
+    update.$push = {
+      responses: {
+        action: choice(req.body.action, responseActions, 'response action'),
+        notes: text(req.body.notes, 'Response notes', false),
+        responder: req.user._id,
+        respondedAt: new Date(),
+      },
+    };
+  }
+  return success(
     res,
     requireRecord(
-      await CommunityReport.findByIdAndUpdate(
-        req.params.id,
-        {
-          status: choice(
-            req.body.status,
-            ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'],
-            'report status',
-          ),
-        },
-        { new: true, runValidators: true },
-      ),
+      await CommunityReport.findByIdAndUpdate(req.params.id, update, {
+        new: true,
+        runValidators: true,
+      }),
       'Community report',
     ),
     'Report status updated',
   );
+};
 export async function respond(req, res) {
   const response = {
     action: choice(req.body.action, responseActions, 'response action'),
@@ -73,14 +83,21 @@ export async function respond(req, res) {
     responder: req.user._id,
     respondedAt: new Date(),
   };
+  const update = { $push: { responses: response } };
+  if (req.body.status) {
+    update.status = choice(
+      req.body.status,
+      ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'],
+      'report status',
+    );
+  }
   success(
     res,
     requireRecord(
-      await CommunityReport.findByIdAndUpdate(
-        req.params.id,
-        { $push: { responses: response } },
-        { new: true, runValidators: true },
-      ),
+      await CommunityReport.findByIdAndUpdate(req.params.id, update, {
+        new: true,
+        runValidators: true,
+      }),
       'Community report',
     ),
     'Response action recorded',
