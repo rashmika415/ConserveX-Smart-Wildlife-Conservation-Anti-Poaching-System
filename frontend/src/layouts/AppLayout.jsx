@@ -138,7 +138,6 @@ export function AppLayout() {
         </main>
         <footer className="app-footer">
           ConserveX · Wildlife Conservation & Anti-Poaching Monitoring System
-          <span>University demonstration · Simulated collar data</span>
         </footer>
       </div>
     </div>
@@ -169,7 +168,7 @@ export function PublicLayout() {
       </main>
       <footer className="public-footer">
         Protecting wildlife. Supporting communities.
-        <span>ConserveX · University demonstration</span>
+        <span>ConserveX</span>
       </footer>
     </div>
   );
