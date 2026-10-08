@@ -35,6 +35,7 @@ export default function ActivePatrol() {
   const [values, setValues] = useState(initial);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [activePatrolId, setActivePatrolId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [endOptionsOpen, setEndOptionsOpen] = useState(false);
   const [endStatus, setEndStatus] = useState('Completed');
@@ -45,6 +46,7 @@ export default function ActivePatrol() {
   async function action(path, body, method = 'patch') {
     setBusy(true);
     setError('');
+    setActivePatrolId(null);
     try {
       if (path === 'end') {
         await syncWaypoints(user._id);
@@ -66,7 +68,12 @@ export default function ActivePatrol() {
         setFormKey((k) => k + 1);
       }
     } catch (error) {
-      setError(error.message || errorMessage(error));
+      setError(
+        error.response
+          ? errorMessage(error)
+          : error.message || errorMessage(error),
+      );
+      setActivePatrolId(error.response?.data?.data?.activePatrolId || null);
       setConfirm(false);
     } finally {
       setBusy(false);
@@ -123,6 +130,16 @@ export default function ActivePatrol() {
         </Link>
       </PageHeader>
       <Feedback error={error} success={success} />
+      {activePatrolId && (
+        <div className="button-row" style={{ marginTop: 0, marginBottom: 16 }}>
+          <Link
+            className="button secondary"
+            to={`/app/patrols/${activePatrolId}`}
+          >
+            Open active patrol to finish it
+          </Link>
+        </div>
+      )}
       <ResourceState resource={resource}>
         {patrol && (
           <>
