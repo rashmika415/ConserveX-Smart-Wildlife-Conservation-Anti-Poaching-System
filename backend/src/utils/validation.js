@@ -12,9 +12,10 @@ export function text(value, label, required = true, max = 2000) {
   return value.trim();
 }
 export function choice(value, choices, label) {
-  if (!choices.includes(value))
+  const clean = typeof value === 'string' ? value.trim() : value;
+  if (!choices.includes(clean))
     throw new ApiError(400, `Choose a valid ${label}`);
-  return value;
+  return clean;
 }
 export function number(value, label, min, max) {
   if (

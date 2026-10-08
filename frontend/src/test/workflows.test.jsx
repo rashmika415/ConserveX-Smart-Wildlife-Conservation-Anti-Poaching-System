@@ -8,6 +8,9 @@ import Dashboard from '../pages/shared/Dashboard';
 import { LocationInput, PhotoUpload } from '../components/UI';
 import { Protected } from '../App';
 import { api, get } from '../services/api';
+import CommunityReports, {
+  CommunityReportDetails,
+} from '../modules/community/CommunityReports';
 const { login, auth } = vi.hoisted(() => ({
   login: vi.fn(),
   auth: { user: null, loading: false },
@@ -17,7 +20,11 @@ vi.mock('../context/AuthContext', () => ({
 }));
 vi.mock('../services/api', async (importOriginal) => {
   const original = await importOriginal();
-  return { ...original, api: { post: vi.fn() }, get: vi.fn() };
+  return {
+    ...original,
+    api: { post: vi.fn(), patch: vi.fn() },
+    get: vi.fn(),
+  };
 });
 const mount = (component) => render(<MemoryRouter>{component}</MemoryRouter>);
 const change = (label, value) =>
@@ -212,5 +219,143 @@ describe('Role dashboards', () => {
     await waitFor(() =>
       expect(screen.getByText('Assigned patrols')).toBeInTheDocument(),
     );
+  });
+});
+describe('Community report management', () => {
+  it('filters community reports by Resolved status properly', async () => {
+    get.mockResolvedValue([
+      {
+        _id: 'report-1',
+        landmark: 'Tank Road',
+        numberOfElephants: 2,
+        directionOfMovement: 'North',
+        status: 'New',
+        responses: [],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        _id: 'report-2',
+        landmark: 'Border Fence',
+        numberOfElephants: 4,
+        directionOfMovement: 'East',
+        status: 'Resolved',
+        responses: [{ _id: 'resp-1', action: 'Monitor Situation' }],
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    render(
+      <MemoryRouter initialEntries={['/app/community']}>
+        <Routes>
+          <Route path="/app/community" element={<CommunityReports />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Tank Road')).toBeInTheDocument();
+    expect(screen.getByText('Border Fence')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Filter by status/), {
+      target: { value: 'Resolved' },
+    });
+    expect(screen.getByText('Border Fence')).toBeInTheDocument();
+    expect(screen.queryByText('Tank Road')).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Filter by status/), {
+      target: { value: 'New' },
+    });
+    expect(screen.getByText('Tank Road')).toBeInTheDocument();
+    expect(screen.queryByText('Border Fence')).not.toBeInTheDocument();
+  });
+
+  it('updates report status to Resolved, saves and redirects back to community reports', async () => {
+    get.mockResolvedValue({
+      _id: 'report-1',
+      landmark: 'Tank Road',
+      numberOfElephants: 2,
+      status: 'New',
+      responses: [],
+      createdAt: new Date().toISOString(),
+    });
+    api.patch.mockResolvedValue({
+      data: { success: true, message: 'Report status updated' },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/app/community/report-1']}>
+        <Routes>
+          <Route
+            path="/app/community/:id"
+            element={<CommunityReportDetails />}
+          />
+          <Route path="/app/community" element={<p>Back on reports list</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Tank Road')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Report status/), {
+      target: { value: 'Resolved' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save status' }));
+
+    await waitFor(() => {
+      expect(api.patch).toHaveBeenCalledWith(
+        '/community-reports/report-1/status',
+        { status: 'Resolved' },
+      );
+    });
+    expect(await screen.findByText('Back on reports list')).toBeInTheDocument();
+  });
+
+  it('records response with Resolved status and redirects back to community reports', async () => {
+    get.mockResolvedValue({
+      _id: 'report-2',
+      landmark: 'Border Fence',
+      numberOfElephants: 3,
+      status: 'New',
+      responses: [],
+      createdAt: new Date().toISOString(),
+    });
+    api.post.mockResolvedValue({
+      data: { success: true, message: 'Response action recorded' },
+    });
+    api.patch.mockResolvedValue({
+      data: { success: true, message: 'Report status updated' },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/app/community/report-2']}>
+        <Routes>
+          <Route
+            path="/app/community/:id"
+            element={<CommunityReportDetails />}
+          />
+          <Route path="/app/community" element={<p>Back on reports list</p>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Border Fence')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Report status/), {
+      target: { value: 'Resolved' },
+    });
+    fireEvent.change(screen.getByLabelText(/Response action/), {
+      target: { value: 'Dispatch Ranger' },
+    });
+    fireEvent.change(screen.getByLabelText(/Response notes/), {
+      target: { value: 'Ranger dispatched to site' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Record response' }));
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith(
+        '/community-reports/report-2/response',
+        {
+          action: 'Dispatch Ranger',
+          notes: 'Ranger dispatched to site',
+          status: 'Resolved',
+        },
+      );
+    });
+    expect(await screen.findByText('Back on reports list')).toBeInTheDocument();
   });
 });

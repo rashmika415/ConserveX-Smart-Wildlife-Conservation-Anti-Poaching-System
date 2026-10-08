@@ -537,6 +537,13 @@ describe('Public community reporting and officer response', () => {
         (r) => r._id === id,
       ),
     ).toBe(true);
+    const resolvedResponse = await auth(
+      'post',
+      `/api/community-reports/${id}/response`,
+      'MANAGER',
+    ).send({ action: 'Mark for Verification', status: 'Resolved' });
+    expect(resolvedResponse.status).toBe(200);
+    expect(resolvedResponse.body.data.status).toBe('Resolved');
     expect(
       (
         await auth(
