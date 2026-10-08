@@ -230,6 +230,7 @@ describe('Incident management', () => {
       .field('incidentType', 'Other')
       .field('latitude', '6.45')
       .field('longitude', '81.4')
+      .field('description', 'Photograph of field evidence')
       .attach('photo', png, {
         filename: 'photo.png',
         contentType: 'image/png',
@@ -275,6 +276,7 @@ describe('Patrol lifecycle', () => {
         await auth('post', '/api/incidents').send({
           incidentType: 'Other',
           ...point,
+          description: 'Observation during active patrol',
           patrolId: id,
         })
       ).status,
@@ -309,6 +311,7 @@ describe('Patrol lifecycle', () => {
         await auth('post', '/api/incidents').send({
           incidentType: 'Other',
           ...point,
+          description: 'Report after patrol ended',
           patrolId: id,
         })
       ).status,

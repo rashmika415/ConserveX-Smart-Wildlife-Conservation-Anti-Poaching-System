@@ -59,9 +59,12 @@ export default function ReportIncident() {
     if (
       !values.incidentType ||
       values.latitude === '' ||
-      values.longitude === ''
+      values.longitude === '' ||
+      !values.description.trim()
     ) {
-      setError('Incident type, latitude and longitude are required.');
+      setError(
+        'Incident type, latitude, longitude and a short description are required.',
+      );
       return;
     }
     setBusy(true);
@@ -146,9 +149,10 @@ export default function ReportIncident() {
             />
             <LocationInput values={values} setValues={setValues} />
             <FormInput
-              label="Description (optional)"
+              label="Short description"
               multiline
-              maxLength={2000}
+              required
+              maxLength={500}
               placeholder="What did you observe?"
               value={values.description}
               onChange={(e) =>

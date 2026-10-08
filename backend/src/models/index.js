@@ -62,7 +62,7 @@ export const User = model('User', {
 });
 export const Incident = model('Incident', {
   incidentType: enumField(incidentTypes, undefined),
-  description: String,
+  description: { type: String, required: true, maxlength: 500 },
   location: { type: point, required: true },
   imageUrl: String,
   rangerId: ref('User'),

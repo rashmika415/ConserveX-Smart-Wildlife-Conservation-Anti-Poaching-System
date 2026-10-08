@@ -66,7 +66,7 @@ describe('Incident form', () => {
         .closest('form'),
     );
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Incident type, latitude and longitude are required',
+      'Incident type, latitude, longitude and a short description are required',
     );
     expect(api.post).not.toHaveBeenCalled();
   });
@@ -78,6 +78,7 @@ describe('Incident form', () => {
     change(/Incident type/, 'Snare / Trap');
     change(/Latitude/, '6.45');
     change(/Longitude/, '81.4');
+    change(/Short description/, 'Wire trap found beside the trail');
     fireEvent.click(
       screen.getByRole('button', { name: 'Submit and synchronize report' }),
     );

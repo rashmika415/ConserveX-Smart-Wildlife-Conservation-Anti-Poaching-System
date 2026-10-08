@@ -21,7 +21,7 @@ export async function create(req, res) {
   const data = {
     incidentType: choice(body.incidentType, incidentTypes, 'incident type'),
     location: location(body),
-    description: text(body.description, 'Description', false),
+    description: text(body.description, 'Description', true, 500),
     imageUrl: req.imageUrl,
     rangerId: req.user._id,
     syncStatus: 'Synced',
