@@ -18,7 +18,7 @@ export default function PatrolManagement() {
   const { user } = useAuth();
   const resource = useResource('/patrols');
   return (
-    <>
+    <div className="patrol-workspace">
       <PageHeader
         eyebrow="PATROL MANAGEMENT"
         title={user.role === 'MANAGER' ? 'Patrol operations' : 'My patrols'}
@@ -32,7 +32,7 @@ export default function PatrolManagement() {
         )}
       </PageHeader>
       <ResourceState resource={resource}>
-        <div className="card-grid">
+        <div className="card-grid patrol-list-grid">
           {resource.data?.map((patrol) => (
             <Link
               to={`/app/patrols/${patrol._id}`}
@@ -67,7 +67,7 @@ export default function PatrolManagement() {
           <EmptyState message="No patrols have been assigned yet." />
         )}
       </ResourceState>
-    </>
+    </div>
   );
 }
 export function CreatePatrol() {
@@ -108,7 +108,7 @@ export function CreatePatrol() {
     }
   }
   return (
-    <>
+    <div className="patrol-workspace">
       <PageHeader
         title="Create & assign patrol"
         description="Plan a route, set checkpoints and assign a ranger."
@@ -216,6 +216,6 @@ export function CreatePatrol() {
           </div>
         </form>
       </ResourceState>
-    </>
+    </div>
   );
 }

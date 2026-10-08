@@ -58,16 +58,30 @@ export async function rangerPatrol(id, user) {
 }
 export async function startPatrol(id, user) {
   const patrol = await rangerPatrol(id, user);
+  if (patrol.status === 'Active') return patrol;
   if (patrol.status !== 'Assigned')
     throw new ApiError(409, 'Only an assigned patrol can be started');
-  if (await Patrol.exists({ rangerId: user._id, status: 'Active' }))
-    throw new ApiError(409, 'End your active patrol before starting another');
+  const activePatrol = await Patrol.findOne({
+    rangerId: user._id,
+    status: 'Active',
+    _id: { $ne: id },
+  }).select('_id routeName');
+  if (activePatrol)
+    throw new ApiError(
+      409,
+      `Finish your active patrol "${activePatrol.routeName}" before starting this assigned patrol.`,
+      { activePatrolId: String(activePatrol._id) },
+    );
   const result = await Patrol.findOneAndUpdate(
     { _id: id, status: 'Assigned' },
     { status: 'Active', startTime: new Date() },
     { new: true },
   );
-  if (!result) throw new ApiError(409, 'Patrol has already been started');
+  if (!result) {
+    const current = await rangerPatrol(id, user);
+    if (current.status === 'Active') return current;
+    throw new ApiError(409, 'Only an assigned patrol can be started');
+  }
   return result;
 }
 export async function addWaypoint(id, user, body, imageUrl) {

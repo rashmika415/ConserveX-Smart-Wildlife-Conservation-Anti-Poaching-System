@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 :root {
   font-family: 'DM Sans', sans-serif;
@@ -2390,4 +2391,113 @@ th {
   .ranger-dashboard .stat-card {
     transition: none;
   }
+}
+
+/* Compact patrol operations workspace. */
+.patrol-workspace {
+  --forest: #163d32;
+  --green: #163d32;
+  --sage: #8ca58d;
+  --mint: #e8f1e9;
+  --muted: #627169;
+  --line: #dbe4dc;
+  --shadow: none;
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+  padding: 20px;
+  border-radius: 16px;
+  background: #f7f8f4;
+  color: #29332f;
+  font-family: Inter, sans-serif;
+  line-height: 1.5;
+}
+.patrol-workspace h1,
+.patrol-workspace h2,
+.patrol-workspace h3 {
+  font-family: Inter, sans-serif;
+  color: var(--forest);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.patrol-workspace h1 { font-size: clamp(1.5rem, 2vw, 1.9rem); margin-bottom: 5px; }
+.patrol-workspace h2 { font-size: 1rem; margin-bottom: 12px; }
+.patrol-workspace .eyebrow { color: #627b65; margin-bottom: 6px; }
+.patrol-workspace .page-heading { margin-bottom: 18px; gap: 16px; }
+.patrol-workspace .panel {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: none;
+  min-width: 0;
+}
+.patrol-workspace .detail-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.patrol-workspace .patrol-side-panels { gap: 16px; }
+.patrol-workspace .section-heading { margin-bottom: 12px; gap: 10px; }
+.patrol-workspace .section-gap { margin-top: 16px; }
+.patrol-workspace .details {
+  grid-template-columns: minmax(110px, 0.85fr) minmax(0, 1.5fr);
+  gap: 8px 14px;
+  margin: 12px 0 0;
+  font-size: 0.8rem;
+}
+.patrol-workspace .details + .button { margin-top: 14px; }
+.patrol-workspace .checkpoint-list { margin: 0; }
+.patrol-workspace .checkpoint-list li { padding-left: 38px; margin-bottom: 12px; }
+.patrol-workspace .checkpoint-list li:last-child { margin-bottom: 0; }
+.patrol-workspace .checkpoint-list li::before { background: var(--mint); color: var(--forest); }
+.patrol-workspace .patrol-list-grid,
+.patrol-workspace .patrol-waypoint-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.patrol-workspace .patrol-card { transition: border-color 0.15s; }
+.patrol-workspace .patrol-card:hover { border-color: var(--sage); }
+.patrol-workspace .patrol-card .muted { margin-bottom: 10px; }
+.patrol-workspace .tile-icon { width: 36px; height: 36px; background: var(--mint); color: var(--forest); }
+.patrol-workspace .card-footer { padding-top: 10px; margin-top: 12px; }
+.patrol-workspace .button { border-radius: 10px; min-height: 40px; padding: 9px 14px; }
+.patrol-workspace .button:hover { background: #244f41; }
+.patrol-workspace .button.secondary { background: #fff; color: var(--forest); border-color: #cbd9cd; }
+.patrol-workspace .button.secondary:hover { background: var(--mint); }
+.patrol-workspace .badge-active,
+.patrol-workspace .badge-completed,
+.patrol-workspace .badge-synced { background: var(--mint); color: var(--forest); }
+.patrol-workspace .patrol-sync-status {
+  display: inline-flex;
+  margin: 0 0 12px;
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: var(--mint);
+  color: var(--forest);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.patrol-workspace .waypoint { padding: 14px; border-radius: 12px; min-width: 0; }
+.patrol-workspace .waypoint .section-heading { align-items: flex-start; flex-wrap: wrap; gap: 6px; }
+.patrol-workspace .waypoint p { margin-bottom: 10px; overflow-wrap: anywhere; }
+.patrol-workspace .waypoint .location-map { min-height: 160px; }
+.patrol-workspace .wide-form { max-width: none; }
+.patrol-workspace .field { margin-bottom: 14px; gap: 5px; }
+.patrol-workspace .field input,
+.patrol-workspace .field select,
+.patrol-workspace .field textarea { padding: 9px 11px; border-color: #cbd9cd; color: #29332f; }
+.patrol-workspace .checkpoint-form { padding: 14px; margin-bottom: 12px; border-radius: 12px; background: #f7f8f4; }
+.patrol-workspace .location-input { padding: 12px; margin-bottom: 12px; }
+.patrol-workspace .button-row { gap: 10px; margin-top: 14px; }
+.patrol-workspace .patrol-termination-panel { background: var(--mint); border-left: 3px solid var(--sage); }
+@media (max-width: 1100px) {
+  .patrol-workspace .detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .patrol-workspace { padding: 12px; }
+  .patrol-workspace .panel { padding: 15px; }
+  .patrol-workspace .details { grid-template-columns: minmax(100px, 0.9fr) minmax(0, 1.3fr); gap: 8px 10px; }
+  .patrol-workspace .page-heading { align-items: flex-start; }
 }

@@ -269,7 +269,10 @@ describe('Patrol lifecycle', () => {
     expect(
       (await auth('patch', `/api/patrols/${id}/start`)).body.data.status,
     ).toBe('Active');
-    expect((await auth('patch', `/api/patrols/${id}/start`)).status).toBe(409);
+    const started = await auth('get', `/api/patrols/${id}`);
+    const retried = await auth('patch', `/api/patrols/${id}/start`);
+    expect(retried.status).toBe(200);
+    expect(retried.body.data.startTime).toBe(started.body.data.startTime);
     expect(
       (
         await auth('post', '/api/incidents').send({
@@ -403,7 +406,10 @@ describe('Patrol lifecycle', () => {
       await auth('post', '/api/patrols', 'MANAGER').send(validPatrol())
     ).body.data._id;
     expect((await auth('patch', `/api/patrols/${one}/start`)).status).toBe(200);
-    expect((await auth('patch', `/api/patrols/${two}/start`)).status).toBe(409);
+    const conflict = await auth('patch', `/api/patrols/${two}/start`);
+    expect(conflict.status).toBe(409);
+    expect(conflict.body.message).toContain('Finish your active patrol');
+    expect(conflict.body.data.activePatrolId).toBe(one);
     expect(
       (
         await auth('patch', `/api/patrols/${one}/end`).send({
@@ -416,6 +422,12 @@ describe('Patrol lifecycle', () => {
       incompleteReason: 'Severe Weather',
     });
     expect(end.body.data.incompleteReason).toBe('Severe Weather');
+    const next = await auth('patch', `/api/patrols/${two}/start`);
+    expect(next.status).toBe(200);
+    expect(next.body.data.status).toBe('Active');
+    await auth('patch', `/api/patrols/${two}/end`).send({
+      status: 'Completed',
+    });
   });
 });
 describe('Collar monitoring and alerts', () => {
