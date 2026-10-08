@@ -362,6 +362,19 @@ small {
   flex-wrap: wrap;
   gap: 6px;
 }
+.notification-footer-links {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--line);
+}
+.notification-footer-links .notification-footer {
+  border-top: none;
+  font-size: 0.8rem;
+  padding: 12px 16px;
+}
+.notification-footer-links .notification-footer:hover {
+  text-decoration: underline;
+}
 .notification-footer {
   display: block;
   padding: 14px 16px;
@@ -660,6 +673,22 @@ small {
   color: #b91c1c;
   background: #fef2f2;
   border-color: #fecaca;
+}
+.badge-responding {
+  color: #0284c7;
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+.badge-resolved {
+  color: #15803d;
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+.badge-community {
+  color: #0f766e;
+  background: #f0fdfa;
+  border-color: #99f6e4;
+  font-weight: 600;
 }
 /* Field & Workflow Statuses */
 .badge-reported {

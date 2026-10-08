@@ -80,6 +80,7 @@ apiRouter.patch(
   tracking.acknowledge,
 );
 apiRouter.patch('/alerts/:id/resolve', manager, tracking.resolve);
+apiRouter.get('/community-reports/notifications', community.notifications);
 apiRouter.get('/community-reports', office, community.list);
 apiRouter.get('/community-reports/:id', office, community.details);
 apiRouter.patch('/community-reports/:id/status', office, community.status);

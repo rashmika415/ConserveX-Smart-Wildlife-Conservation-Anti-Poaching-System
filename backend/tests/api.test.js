@@ -884,6 +884,33 @@ describe('Public community reporting and officer response', () => {
     files.push(saved.imageUrl);
     expect(saved.location.latitude).toBe(6.4);
   });
+  test('returns open community reports for staff notifications', async () => {
+    const reportRes = await request(app).post('/api/community-reports').send({
+      landmark: 'Waterhole 4',
+      numberOfElephants: 4,
+      directionOfMovement: 'North',
+    });
+    expect(reportRes.status).toBe(201);
+
+    expect(
+      (await request(app).get('/api/community-reports/notifications')).status,
+    ).toBe(401);
+
+    const rangerRes = await auth(
+      'get',
+      '/api/community-reports/notifications',
+      'RANGER',
+    );
+    expect(rangerRes.status).toBe(200);
+    expect(Array.isArray(rangerRes.body.data)).toBe(true);
+    const item = rangerRes.body.data.find(
+      (r) => r._id === reportRes.body.data._id,
+    );
+    expect(item).toBeDefined();
+    expect(item.isCommunityReport).toBe(true);
+    expect(item.numberOfElephants).toBe(4);
+    expect(item.message).toContain('4 elephants sighted near Waterhole 4');
+  });
 });
 
 test('offline waypoint retries are atomic and preserve capture time', async () => {

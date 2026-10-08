@@ -356,4 +356,54 @@ describe('Community report management', () => {
     });
     expect(await screen.findByText('Back on reports list')).toBeInTheDocument();
   });
+
+  it('triggers PDF and CSV export buttons for community reports list', async () => {
+    get.mockResolvedValue([
+      {
+        _id: 'report-1',
+        landmark: 'Tank Road',
+        numberOfElephants: 2,
+        status: 'New',
+        responses: [],
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+    render(
+      <MemoryRouter initialEntries={['/app/community']}>
+        <Routes>
+          <Route path="/app/community" element={<CommunityReports />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Tank Road')).toBeInTheDocument();
+    const pdfBtn = screen.getByRole('button', { name: /Download PDF/i });
+    const csvBtn = screen.getByRole('button', { name: /Export CSV/i });
+    expect(pdfBtn).toBeEnabled();
+    expect(csvBtn).toBeEnabled();
+  });
+
+  it('renders Download Case PDF button in community report details', async () => {
+    get.mockResolvedValue({
+      _id: 'report-1',
+      landmark: 'Tank Road',
+      numberOfElephants: 2,
+      status: 'New',
+      responses: [],
+      createdAt: new Date().toISOString(),
+    });
+    render(
+      <MemoryRouter initialEntries={['/app/community/report-1']}>
+        <Routes>
+          <Route
+            path="/app/community/:id"
+            element={<CommunityReportDetails />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByText('Tank Road')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Download Case PDF/i }),
+    ).toBeInTheDocument();
+  });
 });

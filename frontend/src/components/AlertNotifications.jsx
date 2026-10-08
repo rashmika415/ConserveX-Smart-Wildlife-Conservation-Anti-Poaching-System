@@ -2,17 +2,21 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { get, errorMessage } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { formatDate, StatusBadge } from './UI';
 
 export default function AlertNotifications() {
   const [open, setOpen] = useState(false);
   const [alerts, setAlerts] = useState(null);
+  const [sightings, setSightings] = useState([]);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
   const root = useRef(null);
   const button = useRef(null);
   const panelId = useId();
   const { pathname } = useLocation();
+  const auth = useAuth?.() || null;
+  const user = auth?.user || null;
 
   useEffect(() => {
     let active = true;
@@ -21,9 +25,26 @@ export default function AlertNotifications() {
       if (pending) return;
       pending = true;
       try {
-        const records = await get('/alerts');
+        const hasAuth = Boolean(
+          user ||
+            (typeof sessionStorage !== 'undefined' &&
+              sessionStorage.getItem('conservex-token')),
+        );
+        const [records, communityRecords] = await Promise.all([
+          get('/alerts'),
+          hasAuth
+            ? get('/community-reports/notifications').catch(() => [])
+            : Promise.resolve([]),
+        ]);
         if (active) {
           setAlerts(records);
+          setSightings(
+            (communityRecords || []).filter(
+              (item) =>
+                item &&
+                (item.isCommunityReport || item.numberOfElephants != null),
+            ),
+          );
           setError('');
         }
       } catch (failure) {
@@ -35,12 +56,14 @@ export default function AlertNotifications() {
     load();
     const timer = setInterval(load, 30000);
     window.addEventListener('focus', load);
+    window.addEventListener('new-community-report', load);
     return () => {
       active = false;
       clearInterval(timer);
       window.removeEventListener('focus', load);
+      window.removeEventListener('new-community-report', load);
     };
-  }, [pathname, refresh]);
+  }, [pathname, refresh, user]);
 
   useEffect(() => {
     setOpen(false);
@@ -65,16 +88,27 @@ export default function AlertNotifications() {
     };
   }, [open]);
 
-  const pendingCount =
+  const pendingAlerts =
     alerts?.filter((item) => item.status === 'New').length || 0;
-  const records = (alerts || [])
-    .filter((item) => item.status !== 'Resolved')
-    .sort(
-      (a, b) =>
-        Number(Boolean(b.escalatedAt) && b.status === 'New') -
-          Number(Boolean(a.escalatedAt) && a.status === 'New') ||
-        new Date(b.createdAt) - new Date(a.createdAt),
-    );
+  const pendingSightings =
+    sightings?.filter((item) => item.status === 'New').length || 0;
+  const pendingCount = pendingAlerts + pendingSightings;
+
+  const openAlerts = (alerts || []).filter((item) => item.status !== 'Resolved');
+  const openSightings = (sightings || []).filter(
+    (item) => item.status !== 'Resolved',
+  );
+
+  const records = [...openAlerts, ...openSightings].sort((a, b) => {
+    const aEscalated = Boolean(a.escalatedAt) && a.status === 'New';
+    const bEscalated = Boolean(b.escalatedAt) && b.status === 'New';
+    if (bEscalated !== aEscalated) return Number(bEscalated) - Number(aEscalated);
+
+    const aTime = new Date(a.createdAt || a.lastDetectedAt || 0).getTime();
+    const bTime = new Date(b.createdAt || b.lastDetectedAt || 0).getTime();
+    return bTime - aTime;
+  });
+
   return (
     <div className="alert-notifications" ref={root}>
       <button
@@ -130,43 +164,85 @@ export default function AlertNotifications() {
             <p className="notification-message">No open alerts.</p>
           ) : (
             <ul className="notification-list">
-              {records.slice(0, 5).map((alert) => (
-                <li key={alert._id}>
-                  <Link
-                    to={`/app/alerts/${alert._id}`}
-                    onClick={() => setOpen(false)}
-                  >
-                    <strong>
-                      {alert.animalId?.tagName ||
-                        alert.collarId ||
-                        'Wildlife alert'}
-                    </strong>
-                    <span>{alert.message}</span>
-                    <div className="notification-badges">
-                      <StatusBadge status={alert.priority} />
-                      <StatusBadge
-                        status={
-                          alert.escalatedAt && alert.status === 'New'
-                            ? 'Escalated'
-                            : alert.status
-                        }
-                      />
-                    </div>
-                    <small>
-                      {formatDate(alert.lastDetectedAt || alert.createdAt)}
-                    </small>
-                  </Link>
-                </li>
-              ))}
+              {records.slice(0, 5).map((item) => {
+                if (item.isCommunityReport || item.numberOfElephants != null) {
+                  const isRanger = user?.role === 'RANGER';
+                  const linkTarget = isRanger
+                    ? '/app'
+                    : `/app/community/${item._id}`;
+                  return (
+                    <li key={`community-${item._id}`}>
+                      <Link to={linkTarget} onClick={() => setOpen(false)}>
+                        <strong>
+                          {item.landmark
+                            ? `Elephant Sighting · ${item.landmark}`
+                            : 'Elephant Sighting'}
+                        </strong>
+                        <span>
+                          {item.message ||
+                            `${item.numberOfElephants} elephant${item.numberOfElephants > 1 ? 's' : ''} reported`}
+                        </span>
+                        <div className="notification-badges">
+                          <span className="badge badge-community">
+                            Elephant Sighting
+                          </span>
+                          <StatusBadge status={item.status} />
+                        </div>
+                        <small>{formatDate(item.createdAt)}</small>
+                      </Link>
+                    </li>
+                  );
+                }
+
+                return (
+                  <li key={item._id}>
+                    <Link
+                      to={`/app/alerts/${item._id}`}
+                      onClick={() => setOpen(false)}
+                    >
+                      <strong>
+                        {item.animalId?.tagName ||
+                          item.collarId ||
+                          'Wildlife alert'}
+                      </strong>
+                      <span>{item.message}</span>
+                      <div className="notification-badges">
+                        <StatusBadge status={item.priority} />
+                        <StatusBadge
+                          status={
+                            item.escalatedAt && item.status === 'New'
+                              ? 'Escalated'
+                              : item.status
+                          }
+                        />
+                      </div>
+                      <small>
+                        {formatDate(item.lastDetectedAt || item.createdAt)}
+                      </small>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
-          <Link
-            className="notification-footer"
-            to="/app/alerts"
-            onClick={() => setOpen(false)}
-          >
-            View all alerts
-          </Link>
+          <div className="notification-footer-links">
+            <Link
+              className="notification-footer"
+              to="/app/alerts"
+              onClick={() => setOpen(false)}
+            >
+              View all alerts
+            </Link>
+            {user?.role !== 'RANGER' && (
+              <Link
+                className="notification-footer"
+                to="/app/community"
+                onClick={() => setOpen(false)}
+              >
+                Community reports
+              </Link>
+            )}
+          </div>
           <small className="notification-hint">
             Refreshes every 30 seconds. Opening a notification does not
             acknowledge it.

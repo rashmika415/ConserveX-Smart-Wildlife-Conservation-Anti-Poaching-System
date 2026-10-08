@@ -103,3 +103,34 @@ export async function respond(req, res) {
     'Response action recorded',
   );
 }
+
+export async function notifications(_req, res) {
+  const reports = await CommunityReport.find({
+    status: { $in: ['New', 'Reviewing', 'Responding'] },
+  })
+    .sort({ createdAt: -1 })
+    .limit(15)
+    .lean();
+
+  const formatted = reports.map((report) => {
+    const count = report.numberOfElephants || 1;
+    const location = report.landmark || report.town || 'community area';
+    const direction = report.directionOfMovement
+      ? ` (moving ${report.directionOfMovement})`
+      : '';
+    return {
+      _id: report._id,
+      isCommunityReport: true,
+      landmark: report.landmark,
+      numberOfElephants: report.numberOfElephants,
+      directionOfMovement: report.directionOfMovement,
+      status: report.status,
+      createdAt: report.createdAt,
+      town: report.town,
+      district: report.district,
+      message: `${count} elephant${count > 1 ? 's' : ''} sighted near ${location}${direction}`,
+    };
+  });
+
+  success(res, formatted);
+}

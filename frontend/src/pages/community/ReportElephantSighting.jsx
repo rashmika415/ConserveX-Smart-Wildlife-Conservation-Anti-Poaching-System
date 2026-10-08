@@ -42,6 +42,7 @@ export default function ReportElephantSighting() {
     setBusy(true);
     try {
       const { data } = await api.post('/community-reports', multipart(values));
+      window.dispatchEvent(new Event('new-community-report'));
       navigate('/report/confirmation', { state: { id: data.data._id } });
     } catch (error) {
       setError(errorMessage(error));
