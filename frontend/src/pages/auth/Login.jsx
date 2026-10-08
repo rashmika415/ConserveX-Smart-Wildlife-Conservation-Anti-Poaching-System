@@ -73,12 +73,6 @@ export default function Login() {
           <Link to="/report">Report an elephant sighting</Link> without an
           account.
         </p>
-        <details className="demo-accounts">
-          <summary>University demo accounts</summary>
-          <p>Manager: manager@wildlife.lk / Manager123!</p>
-          <p>Ranger: ranger@wildlife.lk / Ranger123!</p>
-          <p>Liaison: officer@wildlife.lk / Officer123!</p>
-        </details>
       </section>
     </div>
   );
