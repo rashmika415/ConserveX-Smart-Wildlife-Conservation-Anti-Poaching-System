@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useResource } from '../../hooks/useResource';
 import { api, errorMessage } from '../../services/api';
@@ -33,6 +33,11 @@ export default function IncidentManagement() {
   const visibleResource = records.length
     ? { ...resource, loading: false, error: '' }
     : resource;
+  useEffect(() => {
+    const reload = () => resource.reload();
+    window.addEventListener('incident-synced', reload);
+    return () => window.removeEventListener('incident-synced', reload);
+  }, [resource.reload]);
   return (
     <>
       <PageHeader
