@@ -1123,6 +1123,53 @@ small {
 .location-preview-box {
   margin-top: 16px;
 }
+.interactive-location-map-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #c9d8c5;
+  border-radius: 10px;
+  background: #e9efe5;
+}
+.interactive-location-map {
+  height: 360px;
+  width: 100%;
+  z-index: 0;
+  background:
+    linear-gradient(135deg, #edf3e8 25%, transparent 25%) -12px 0 / 24px 24px,
+    linear-gradient(225deg, #edf3e8 25%, transparent 25%) -12px 0 / 24px 24px,
+    linear-gradient(315deg, #edf3e8 25%, transparent 25%) 0 0 / 24px 24px,
+    linear-gradient(45deg, #edf3e8 25%, #f7faf4 25%) 0 0 / 24px 24px;
+}
+.incident-map-marker {
+  background: transparent;
+  border: 0;
+}
+.incident-map-marker span {
+  display: block;
+  width: 28px;
+  height: 28px;
+  background: #a33f2f;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 3px 10px #18352266;
+}
+.incident-map-marker span::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: 7px;
+  border-radius: 50%;
+  background: #fff;
+}
+.map-offline-hint {
+  padding: 7px 11px;
+  background: #fffef0;
+  color: #6f643c;
+  border-top: 1px solid #ded6b4;
+  font-size: 0.68rem;
+}
 .preview-header {
   display: flex;
   justify-content: space-between;
