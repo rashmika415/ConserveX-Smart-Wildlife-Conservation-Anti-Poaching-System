@@ -1268,6 +1268,42 @@ small {
   border-top: 1px solid #ded6b4;
   font-size: 0.68rem;
 }
+.map-location-footer {
+  padding: 11px 14px;
+  background: #fff;
+  border-top: 1px solid #dfe7db;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.map-location-footer span,
+.map-location-footer strong {
+  display: block;
+}
+.map-location-footer span {
+  color: var(--muted);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.map-location-footer strong {
+  margin-top: 3px;
+  font-size: 0.76rem;
+}
+.map-location-footer a {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.incident-detail-map {
+  align-self: start;
+  box-shadow: 0 8px 24px rgba(34, 67, 46, 0.06);
+}
+.incident-detail-map .interactive-location-map {
+  height: 312px;
+}
 .preview-header {
   display: flex;
   justify-content: space-between;
