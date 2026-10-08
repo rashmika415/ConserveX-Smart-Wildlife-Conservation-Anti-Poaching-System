@@ -62,14 +62,22 @@ export const User = model('User', {
 });
 export const Incident = model('Incident', {
   incidentType: enumField(incidentTypes, undefined),
-  description: String,
+  description: { type: String, required: true, maxlength: 500 },
   location: { type: point, required: true },
   imageUrl: String,
   rangerId: ref('User'),
   patrolId: ref('Patrol', false),
   status: enumField(['Reported', 'Under Review', 'Resolved'], 'Reported'),
   syncStatus: enumField(['Synced', 'Pending'], 'Synced'),
+  clientReportId: { type: String, maxlength: 100 },
 });
+Incident.schema.index(
+  { rangerId: 1, clientReportId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { clientReportId: { $type: 'string' } },
+  },
+);
 const waypoint = new Schema({
   clientId: String,
   location: { type: point, required: true },
