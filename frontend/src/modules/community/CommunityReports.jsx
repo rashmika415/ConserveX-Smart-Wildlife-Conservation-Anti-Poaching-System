@@ -13,6 +13,12 @@ import {
   LocationMap,
   Photo,
 } from '../../components/UI';
+import { FileDown, Download } from 'lucide-react';
+import {
+  exportAllReportsPDF,
+  exportAllReportsCSV,
+  exportSingleReportPDF,
+} from '../../services/pdfExport';
 const statuses = ['New', 'Reviewing', 'Responding', 'Resolved', 'False Report'];
 export default function CommunityReports() {
   const resource = useResource('/community-reports');
@@ -30,7 +36,24 @@ export default function CommunityReports() {
         eyebrow="COMMUNITY RESPONSE"
         title="Community reports"
         description="Local observations. Coordinated conservation action."
-      />
+      >
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => exportAllReportsPDF(records, filter)}
+          disabled={!records.length}
+        >
+          <FileDown size={16} /> Download PDF
+        </button>
+        <button
+          type="button"
+          className="button secondary"
+          onClick={() => exportAllReportsCSV(records)}
+          disabled={!records.length}
+        >
+          <Download size={16} /> Export CSV
+        </button>
+      </PageHeader>
       <section className="panel">
         <div className="section-heading">
           <h2>Elephant sightings</h2>
@@ -146,6 +169,15 @@ export function CommunityReportDetails() {
   return (
     <>
       <PageHeader title="Community report details">
+        {report && (
+          <button
+            type="button"
+            className="button secondary"
+            onClick={() => exportSingleReportPDF(report)}
+          >
+            <FileDown size={16} /> Download Case PDF
+          </button>
+        )}
         <Link className="button secondary" to="/app/community">
           All reports
         </Link>
