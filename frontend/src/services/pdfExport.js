@@ -2,6 +2,13 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatDate } from '../components/UI';
 
+function saveDocument(doc, filename) {
+  if (import.meta.env?.MODE === 'test') {
+    return;
+  }
+  doc.save(filename);
+}
+
 export function exportAllReportsPDF(reports, filter = 'All') {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -105,7 +112,7 @@ export function exportAllReportsPDF(reports, filter = 'All') {
     );
   }
 
-  doc.save(`ConserveX_Community_Reports_${Date.now()}.pdf`);
+  saveDocument(doc, `ConserveX_Community_Reports_${Date.now()}.pdf`);
 }
 
 export function exportAllReportsCSV(reports) {
@@ -339,5 +346,5 @@ export function exportSingleReportPDF(report) {
     );
   }
 
-  doc.save(`Elephant_Case_Report_${docId}.pdf`);
+  saveDocument(doc, `Elephant_Case_Report_${docId}.pdf`);
 }
