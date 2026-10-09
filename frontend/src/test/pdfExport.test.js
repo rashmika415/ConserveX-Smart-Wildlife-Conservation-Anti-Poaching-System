@@ -1,3 +1,7 @@
+
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { formatDate } from '../components/UI';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   exportAllReportsPDF,
