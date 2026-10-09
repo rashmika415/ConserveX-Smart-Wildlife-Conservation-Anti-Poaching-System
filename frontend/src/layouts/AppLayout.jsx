@@ -34,6 +34,7 @@ const links = {
     ['/app/incidents/new', 'Report Incident', PlusCircle],
     ['/app/incidents', 'Incident History', FileWarning],
     ['/app/alerts', 'Alerts', Bell],
+    ['/app/community', 'Community Sightings', Users],
   ],
   LIAISON: [
     ...base,

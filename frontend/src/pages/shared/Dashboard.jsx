@@ -72,7 +72,7 @@ export default function Dashboard() {
           get('/alerts'),
           user.role !== 'LIAISON' ? get('/incidents') : [],
           user.role !== 'LIAISON' ? get('/patrols') : [],
-          user.role !== 'RANGER' ? get('/community-reports') : [],
+          get('/community-reports').catch(() => []),
         ]);
         if (active) {
           setData({ alerts, incidents, patrols, community });
@@ -163,19 +163,17 @@ export default function Dashboard() {
               tone="amber"
               to="/app/alerts"
             />
-            {user.role !== 'RANGER' && (
-              <DashboardCard
-                label="Community reports"
-                value={
-                  data.community.filter(
-                    (p) => !['Resolved', 'False Report'].includes(p.status),
-                  ).length
-                }
-                icon={Users}
-                tone="blue"
-                to="/app/community"
-              />
-            )}
+            <DashboardCard
+              label={user.role === 'RANGER' ? 'Community sightings' : 'Community reports'}
+              value={
+                data.community.filter(
+                  (p) => !['Resolved', 'False Report'].includes(p.status),
+                ).length
+              }
+              icon={Users}
+              tone="blue"
+              to="/app/community"
+            />
             {user.role === 'RANGER' && (
               <DashboardCard
                 label="Assigned patrols"
@@ -320,18 +318,16 @@ export default function Dashboard() {
               subtitle={(i) => i.zoneId?.zoneName || i.message}
               icon={Bell}
             />
-            {user.role !== 'RANGER' && (
-              <RecentPanel
-                title="Community sightings"
-                items={data.community}
-                path="/app/community"
-                label={(i) => i.landmark}
-                subtitle={(i) =>
-                  `${i.numberOfElephants} elephants · ${formatDate(i.createdAt)}`
-                }
-                icon={Users}
-              />
-            )}
+            <RecentPanel
+              title="Community sightings"
+              items={data.community}
+              path={user.role === 'RANGER' ? '/app/community' : '/app/community'}
+              label={(i) => `${i.landmark} (${i.numberOfElephants} elephant${i.numberOfElephants > 1 ? 's' : ''})`}
+              subtitle={(i) =>
+                `${i.directionOfMovement ? 'Moving ' + i.directionOfMovement + ' · ' : ''}${formatDate(i.createdAt)}`
+              }
+              icon={Users}
+            />
             {user.role !== 'LIAISON' && (
               <RecentPanel
                 title="Patrol activity"

@@ -845,6 +845,13 @@ describe('Public community reporting and officer response', () => {
         (r) => r._id === id,
       ),
     ).toBe(true);
+    const resolvedResponse = await auth(
+      'post',
+      `/api/community-reports/${id}/response`,
+      'MANAGER',
+    ).send({ action: 'Mark for Verification', status: 'Resolved' });
+    expect(resolvedResponse.status).toBe(200);
+    expect(resolvedResponse.body.data.status).toBe('Resolved');
     expect(
       (
         await auth(
@@ -876,6 +883,76 @@ describe('Public community reporting and officer response', () => {
     const saved = await CommunityReport.findById(valid.body.data._id);
     files.push(saved.imageUrl);
     expect(saved.location.latitude).toBe(6.4);
+  });
+  test('returns open community reports for staff notifications', async () => {
+    const reportRes = await request(app).post('/api/community-reports').send({
+      landmark: 'Waterhole 4',
+      numberOfElephants: 4,
+      directionOfMovement: 'North',
+    });
+    expect(reportRes.status).toBe(201);
+
+    expect(
+      (await request(app).get('/api/community-reports/notifications')).status,
+    ).toBe(401);
+
+    const rangerRes = await auth(
+      'get',
+      '/api/community-reports/notifications',
+      'RANGER',
+    );
+    expect(rangerRes.status).toBe(200);
+    expect(Array.isArray(rangerRes.body.data)).toBe(true);
+    const item = rangerRes.body.data.find(
+      (r) => r._id === reportRes.body.data._id,
+    );
+    expect(item).toBeDefined();
+    expect(item.isCommunityReport).toBe(true);
+    expect(item.numberOfElephants).toBe(4);
+    expect(item.message).toContain('4 elephants sighted near Waterhole 4');
+  });
+  test('processes SMS short-code sighting and validates syntax', async () => {
+    expect(
+      (await request(app).post('/api/community-reports/sms').send({})).status,
+    ).toBe(400);
+
+    expect(
+      (
+        await request(app)
+          .post('/api/community-reports/sms')
+          .send({ message: 'LION spotted near gate' })
+      ).status,
+    ).toBe(400);
+
+    const smsRes = await request(app)
+      .post('/api/community-reports/sms')
+      .send({
+        message: 'ELEPHANT Kataragama Road 3',
+        sender: '0779876543',
+      });
+    expect(smsRes.status).toBe(201);
+    expect(smsRes.body.data.reply).toContain(
+      'Report received for Kataragama Road. Wildlife rangers and liaison officers notified.',
+    );
+
+    const saved = await CommunityReport.findById(smsRes.body.data._id);
+    expect(saved.landmark).toBe('Kataragama Road');
+    expect(saved.numberOfElephants).toBe(3);
+    expect(saved.contact).toBe('0779876543');
+    expect(saved.reportType).toBe('Elephant Sighting');
+
+    const defaultCountRes = await request(app)
+      .post('/api/community-reports/sms')
+      .send({
+        message: 'ELEPHANT Main Lake',
+      });
+    expect(defaultCountRes.status).toBe(201);
+    const savedDefault = await CommunityReport.findById(
+      defaultCountRes.body.data._id,
+    );
+    expect(savedDefault.numberOfElephants).toBe(1);
+    expect(savedDefault.landmark).toBe('Main Lake');
+    expect(savedDefault.contact).toBe('SMS Short Code (1990)');
   });
 });
 
