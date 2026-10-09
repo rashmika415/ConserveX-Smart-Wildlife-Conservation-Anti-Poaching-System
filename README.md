@@ -119,6 +119,17 @@ It checks tracking scenarios, uses a six-second escalation threshold, and serves
 
 Run these commands from the repository root:
 
+Each member command runs the relevant frontend tests and backend API tests separately from the other modules:
+
+| Member | Feature                        | Command                    |
+| ------ | ------------------------------ | -------------------------- |
+| 1      | Incident management            | `npm.cmd run test:member1` |
+| 2      | GPS collar tracking and alerts | `npm.cmd run test:member2` |
+| 3      | Patrol management              | `npm.cmd run test:member3` |
+| 4      | Community reporting            | `npm.cmd run test:member4` |
+
+Use `npm.cmd test` for the complete frontend/backend suite, including shared authentication and utility tests. Member runs do not calculate whole-application coverage. Use the full coverage command below for that; browser tests are a separate command.
+
 | Command                     | Purpose                                                    |
 | --------------------------- | ---------------------------------------------------------- |
 | `npm.cmd test`              | Run backend and frontend tests.                            |
