@@ -1,5 +1,22 @@
 # Verification record
 
+## Frontend coverage update — 9 October 2026
+
+`npm.cmd run test -w frontend -- --coverage` passes **153 tests across 15 test files**.
+
+| Metric     | Whole-frontend coverage |
+| ---------- | ----------------------- |
+| Statements | 94.68%                  |
+| Branches   | 87.40%                  |
+| Functions  | 91.42%                  |
+| Lines      | 95.65%                  |
+
+The frontend coverage configuration now requires at least **80% for each metric globally**. The existing coverage scope is unchanged: all JavaScript/JSX application files are included except the bootstrap entry point (`src/main.jsx`) and test files.
+
+New tests exercise session restoration and expiry, offline incident persistence and retries, cached patrol recovery, incident review, patrol assignment, waypoint recording, completion and early termination, role navigation, dashboard calculations, API authentication, geocoding failures, and location controls. Network responses and the third-party map engine are mocked at their boundaries; these results describe unit/component tests, not a new browser or backend verification run.
+
+The dated results below are historical records and do not represent the current frontend totals.
+
 Verified on 6 October 2026 with Node.js 22.17.0 on Windows.
 
 ## Member 2 unit coverage update — 7 October 2026
